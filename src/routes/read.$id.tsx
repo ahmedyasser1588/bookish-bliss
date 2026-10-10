@@ -22,9 +22,9 @@ export const Route = createFileRoute("/read/$id")({
 
 type Settings = { theme: string; font: string; size: number; line: number; spacing: number; margin: number; mode: "scroll" | "page"; speed: number };
 const DEF: Settings = { theme: "sepia", font: "Amiri", size: 20, line: 1.8, spacing: 0, margin: 24, mode: "page", speed: 1 };
-const THEMES = [["light", "فاتح"], ["sepia", "ورقي"], ["dark", "داكن"], ["oled", "أسود"]];
+const THEMES: [string, string][] = [["light", "فاتح"], ["sepia", "ورقي"], ["dark", "داكن"], ["oled", "أسود"]];
 const FONTS = ["Amiri", "Noto Naskh Arabic", "Cairo", "Literata", "Georgia"];
-const COLORS = [["yellow", "فكرة"], ["green", "اقتباس"], ["pink", "مفردات"], ["blue", "سؤال"]];
+const COLORS: [string, string][] = [["yellow", "فكرة"], ["green", "اقتباس"], ["pink", "مفردات"], ["blue", "سؤال"]];
 
 function Reader() {
   const { id } = Route.useParams();
@@ -74,7 +74,7 @@ function Reader() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [book, s.mode, s.size, s.line, s.margin, s.font, s.spacing]);
 
-  const saveT = useRef<ReturnType<typeof setTimeout>>();
+  const saveT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const onScroll = () => {
     const { pos, max } = metrics();
     const p = max > 0 ? Math.min(1, pos / max) : 1;

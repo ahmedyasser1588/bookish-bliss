@@ -8,7 +8,7 @@ const mdToHtml = (t: string) =>
   t.split(/\n\s*\n/).map((b) => {
     const s = b.trim();
     const h = s.match(/^(#{1,3})\s+(.*)$/s);
-    if (h) return `<h${h[1].length}>${esc(h[2])}</h${h[1].length}>`;
+    if (h) { const l = h[1]!.length; return `<h${l}>${esc(h[2]!)}</h${l}>`; }
     if (s.startsWith(">")) return `<blockquote>${esc(s.replace(/^>\s?/gm, ""))}</blockquote>`;
     return s ? `<p>${esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\*(.+?)\*/g, "<em>$1</em>").replace(/\n/g, "<br/>")}</p>` : "";
   }).join("");
@@ -36,7 +36,7 @@ async function parseEpub(file: File) {
   let cover: string | undefined;
   const coverId = opf.querySelector('meta[name="cover"]')?.getAttribute("content");
   const coverItem = [...items.values()].find((i) => i.props.includes("cover-image")) || (coverId ? items.get(coverId) : undefined);
-  if (coverItem) { const f = zip.file(resolve(coverItem.href)); if (f) cover = await blobToDataUrl(new Blob([await f.async("uint8array")], { type: coverItem.type })); }
+  if (coverItem) { const f = zip.file(resolve(coverItem.href)); if (f) cover = await blobToDataUrl(new Blob([await f.async("arraybuffer")], { type: coverItem.type })); }
   let html = "";
   for (const ref of opf.querySelectorAll("spine > itemref")) {
     const it = items.get(ref.getAttribute("idref")!); if (!it) continue;
@@ -74,7 +74,7 @@ async function parsePdf(file: File) {
 
 export async function importFile(file: File): Promise<Book> {
   const ext = file.name.split(".").pop()!.toLowerCase();
-  let r: { title: string; author: string; cover?: string; html: string };
+  let r: { title: string; author: string; cover?: string | undefined; html: string };
   if (ext === "epub") r = await parseEpub(file);
   else if (ext === "pdf") r = await parsePdf(file);
   else if (ext === "md" || ext === "markdown") r = { title: file.name.replace(/\.\w+$/, ""), author: "", html: mdToHtml(await file.text()) };

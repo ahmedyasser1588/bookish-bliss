@@ -1,21 +1,21 @@
 import { openDB } from "idb";
 
-export type Highlight = { id: string; text: string; color: string; note?: string; createdAt: number };
+export type Highlight = { id: string; text: string; color: string; note?: string | undefined; createdAt: number };
 export type Book = {
   id: string;
   title: string;
   author: string;
   format: string;
   size: number;
-  cover?: string;
+  cover?: string | undefined;
   html: string;
   dir: "rtl" | "ltr";
   wordCount: number;
   progress: number;
   favorite: boolean;
-  category?: string;
+  category?: string | undefined;
   addedAt: number;
-  lastOpened?: number;
+  lastOpened?: number | undefined;
   highlights: Highlight[];
 };
 
