@@ -114,7 +114,7 @@ function Reader() {
     const nodes: Text[] = []; const starts: number[] = []; let full = "";
     const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     while (w.nextNode()) { const n = w.currentNode as Text; starts.push(full.length); nodes.push(n); full += n.data; }
-    const locate = (i: number) => { let k = 0; while (k + 1 < starts.length && starts[k + 1] <= i) k++; return [nodes[k], i - starts[k]] as const; };
+    const locate = (i: number) => { let k = 0; while (k + 1 < starts.length && starts[k + 1]! <= i) k++; return [nodes[k]!, i - starts[k]!] as const; };
     const groups: Record<string, Range[]> = {};
     for (const h of book.highlights) {
       const i = full.indexOf(h.text); if (i < 0) continue;
@@ -149,7 +149,7 @@ function Reader() {
 
   const lookup = async (word: string) => {
     setSel(null);
-    const w = word.split(/\s+/)[0];
+    const w = word.split(/\s+/)[0] ?? word;
     if (/[\u0600-\u06FF]/.test(w)) { window.open(`https://www.almaany.com/ar/dict/ar-ar/${encodeURIComponent(w)}/`, "_blank"); return; }
     setDict({ word: w, defs: ["جارٍ البحث…"] });
     try {
@@ -173,7 +173,7 @@ function Reader() {
     setSpeaking(true);
     const next = () => {
       if (i >= blocks.length) return setSpeaking(false);
-      const u = new SpeechSynthesisUtterance(blocks[i++].innerText);
+      const u = new SpeechSynthesisUtterance(blocks[i++]!.innerText);
       u.lang = rtl ? "ar-EG" : "en-US"; u.onend = next; u.onerror = () => setSpeaking(false);
       speechSynthesis.speak(u);
     };
