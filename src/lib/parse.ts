@@ -89,11 +89,11 @@ export async function importFile(file: File): Promise<Book> {
   else if (ext === "md" || ext === "markdown") r = { title: file.name.replace(/\.\w+$/, ""), author: "", html: mdToHtml(await file.text()) };
   else if (ext === "txt") r = { title: file.name.replace(/\.\w+$/, ""), author: "", html: toParas(await file.text()) };
   else throw new Error("صيغة غير مدعومة");
-  const plain = r.html.replace(/<[^>]+>/g, " ");
+  const plain = r.html.replace(/<img[^>]*>/g, " ").replace(/<[^>]+>/g, " ");
   if (plain.trim().length < 20 && !r.scans)
     throw new Error("مفيش نص في الملف ده (غالبًا صفحات مصورة/ممسوحة ضوئيًا أو ملف محمي)");
 
-  const ar = (plain.slice(0, 5000).match(/[\u0600-\u06FF]/g) || []).length;
+  const ar = ((plain.slice(0, 5000) + r.title).match(/[\u0600-\u06FF]/g) || []).length;
   const lat = (plain.slice(0, 5000).match(/[a-zA-Z]/g) || []).length;
   return {
     id: crypto.randomUUID(), title: r.title, author: r.author, cover: r.cover, html: r.html, format: ext.toUpperCase(), size: file.size,
