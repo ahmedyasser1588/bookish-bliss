@@ -54,7 +54,7 @@ async function parsePdf(file: File) {
   const worker = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
   pdfjs.GlobalWorkerOptions.workerSrc = worker;
   const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
-  let html = ""; let cover: string | undefined;
+  let html = ""; let cover: string | undefined; let scans = 0;
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     if (i === 1) {
@@ -66,29 +66,38 @@ async function parsePdf(file: File) {
     const tc = await page.getTextContent();
     let text = "";
     for (const it of tc.items as { str: string; hasEOL?: boolean }[]) text += it.str + (it.hasEOL ? "\n" : " ");
+    if (text.trim().length < 20) {
+      // scanned page: keep it as an image
+      const vp = page.getViewport({ scale: 2 }); const c = document.createElement("canvas");
+      c.width = vp.width; c.height = vp.height;
+      await page.render({ canvasContext: c.getContext("2d")!, viewport: vp, canvas: c } as never).promise;
+      html += `<section class="scan"><img src="${c.toDataURL("image/jpeg", 0.6)}" alt=""/></section>`;
+      c.width = c.height = 0; scans++;
+      continue;
+    }
     html += `<section>${toParas(text.replace(/\n(?=\S)/g, " ").replace(/ {2,}/g, "\n\n"))}</section>`;
   }
   const meta = (await pdf.getMetadata().catch(() => null))?.info as { Title?: string; Author?: string } | undefined;
-  return { title: meta?.Title || file.name.replace(/\.pdf$/i, ""), author: meta?.Author || "", cover, html };
+  return { title: meta?.Title || file.name.replace(/\.pdf$/i, ""), author: meta?.Author || "", cover, html, scans };
 }
 
 export async function importFile(file: File): Promise<Book> {
   const ext = file.name.split(".").pop()!.toLowerCase();
-  let r: { title: string; author: string; cover?: string | undefined; html: string };
+  let r: { title: string; author: string; cover?: string | undefined; html: string; scans?: number };
   if (ext === "epub") r = await parseEpub(file);
   else if (ext === "pdf") r = await parsePdf(file);
   else if (ext === "md" || ext === "markdown") r = { title: file.name.replace(/\.\w+$/, ""), author: "", html: mdToHtml(await file.text()) };
   else if (ext === "txt") r = { title: file.name.replace(/\.\w+$/, ""), author: "", html: toParas(await file.text()) };
   else throw new Error("صيغة غير مدعومة");
   const plain = r.html.replace(/<[^>]+>/g, " ");
-  if (plain.trim().length < 20)
+  if (plain.trim().length < 20 && !r.scans)
     throw new Error("مفيش نص في الملف ده (غالبًا صفحات مصورة/ممسوحة ضوئيًا أو ملف محمي)");
 
   const ar = (plain.slice(0, 5000).match(/[\u0600-\u06FF]/g) || []).length;
   const lat = (plain.slice(0, 5000).match(/[a-zA-Z]/g) || []).length;
   return {
-    id: crypto.randomUUID(), ...r, format: ext.toUpperCase(), size: file.size,
-    dir: ar > lat ? "rtl" : "ltr", wordCount: plain.split(/\s+/).filter(Boolean).length,
+    id: crypto.randomUUID(), title: r.title, author: r.author, cover: r.cover, html: r.html, format: ext.toUpperCase(), size: file.size,
+    dir: ar > lat ? "rtl" : "ltr", wordCount: plain.split(/\s+/).filter(Boolean).length + (r.scans || 0) * 250,
     progress: 0, favorite: false, addedAt: Date.now(), highlights: [],
   };
 }

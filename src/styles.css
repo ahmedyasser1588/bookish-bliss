@@ -90,6 +90,8 @@
 .book-content h1 { font-size: 1.6em; } .book-content h2 { font-size: 1.35em; } .book-content h3 { font-size: 1.15em; }
 .book-content blockquote { border-inline-start: 3px solid var(--r-mute); padding-inline-start: 1em; opacity: .85; margin: 1em 0; }
 .book-content section { break-before: column; }
+.book-content .scan { display:flex; align-items:center; justify-content:center; }
+.book-content .scan img { max-width:100%; max-height:calc(100vh - 110px); object-fit:contain; border-radius:4px; }
 .book-content a { color: inherit; text-decoration: underline; }
 
 ::highlight(hl-yellow) { background-color: var(--hl-yellow); }
