@@ -50,8 +50,8 @@ async function parseEpub(file: File) {
 }
 
 async function parsePdf(file: File) {
-  const pdfjs = await import("pdfjs-dist");
-  const worker = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const worker = (await import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?url")).default;
   pdfjs.GlobalWorkerOptions.workerSrc = worker;
   const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
   let html = ""; let cover: string | undefined; let scans = 0;
