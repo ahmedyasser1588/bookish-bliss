@@ -72,7 +72,7 @@ async function parsePdf(file: File) {
   if (scans > pdf.numPages / 2) html = "";
   const meta = (await pdf.getMetadata().catch(() => null))?.info as { Title?: string; Author?: string } | undefined;
   const pages = pdf.numPages;
-  await pdf.destroy();
+  await pdf.loadingTask.destroy();
   return { title: meta?.Title || file.name.replace(/\.pdf$/i, ""), author: meta?.Author || "", cover, html, pages };
 }
 

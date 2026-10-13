@@ -39,7 +39,7 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi }
         setPdf(doc);
       } catch (e) { setErr((e as Error).message); }
     })();
-    return () => { dead = true; doc?.destroy(); };
+    return () => { dead = true; doc?.loadingTask.destroy(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file]);
 
@@ -161,7 +161,7 @@ function PdfPage({ pdf, n, width, height, root, eager }: { pdf: Pdf; n: number; 
     const c = canvas.current;
     if (!c) return;
     if (!visible) { c.width = c.height = 0; setDone(false); return; }
-    let dead = false; let task: { cancel: () => void; promise: Promise<void> } | null = null;
+    let dead = false; let task: { cancel: () => void; promise: Promise<void> } | undefined;
     const t = setTimeout(async () => {
       try {
         const p = await pdf.getPage(n);
