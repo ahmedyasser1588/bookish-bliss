@@ -9,6 +9,9 @@ export type Book = {
   size: number;
   cover?: string | undefined;
   html: string;
+  /** original file, kept for PDFs so pages can be shown exactly as printed */
+  file?: Blob | undefined;
+  pages?: number | undefined;
   dir: "rtl" | "ltr";
   wordCount: number;
   progress: number;

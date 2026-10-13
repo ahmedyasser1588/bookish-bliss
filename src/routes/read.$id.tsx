@@ -3,10 +3,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight, Type, Highlighter, Timer, Volume2, VolumeX, ChevronLeft, ChevronRight,
-  Copy, Download, Languages, BookA, X, Play, Pause, Trash2, CloudRain,
+  Copy, Download, Languages, BookA, X, Play, Pause, Trash2, CloudRain, FileImage, FileText,
 } from "lucide-react";
 import { getBook, updateBook, type Book, type Highlight } from "@/lib/db";
 import { addMinute } from "@/lib/stats";
+import { PdfView } from "@/components/PdfView";
 
 export const Route = createFileRoute("/read/$id")({
   head: () => ({
@@ -37,6 +38,7 @@ function Reader() {
   const [dict, setDict] = useState<{ word: string; defs: string[] } | null>(null);
   const [auto, setAuto] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [orig, setOrig] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const restored = useRef(false);
 
@@ -189,6 +191,13 @@ function Reader() {
 
   if (!book) return <div className="reader grid min-h-screen place-items-center" data-theme={s.theme}>جارٍ فتح الكتاب…</div>;
   const minsLeft = Math.ceil((book.wordCount * (1 - progress)) / 200);
+  const pdfMode = !!book.file && (!book.html || orig);
+  const oldPdf = book.format === "PDF" && !book.file;
+  const saveProgress = (p: number) => {
+    setProgress(p);
+    clearTimeout(saveT.current);
+    saveT.current = setTimeout(() => updateBook(id, { progress: p }), 400);
+  };
 
   return (
     <div className="reader fixed inset-0 overflow-hidden" data-theme={s.theme}>
@@ -198,15 +207,31 @@ function Reader() {
             className="reader-ui absolute inset-x-0 top-0 z-20 flex items-center gap-1 px-3 py-2 shadow-book">
             <Link to="/" className="p-2" aria-label="رجوع"><ArrowRight className="size-5" /></Link>
             <div className="min-w-0 flex-1 truncate font-semibold">{book.title}</div>
-            <button className="p-2" aria-label="قراءة صوتية" onClick={speak}>{speaking ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}</button>
-            <button className="p-2" aria-label="تمرير تلقائي" onClick={() => setAuto(!auto)}>{auto ? <Pause className="size-5" /> : <Play className="size-5" />}</button>
+            {book.file && book.html && (
+              <button className="p-2" aria-label={orig ? "عرض النص" : "الشكل الأصلي"} title={orig ? "عرض النص" : "الشكل الأصلي للصفحات"} onClick={() => setOrig(!orig)}>
+                {orig ? <FileText className="size-5" /> : <FileImage className="size-5" />}
+              </button>
+            )}
+            {!pdfMode && <button className="p-2" aria-label="قراءة صوتية" onClick={speak}>{speaking ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}</button>}
+            {!pdfMode && <button className="p-2" aria-label="تمرير تلقائي" onClick={() => setAuto(!auto)}>{auto ? <Pause className="size-5" /> : <Play className="size-5" />}</button>}
             <button className="p-2" aria-label="مؤقت" onClick={() => setPanel(panel === "timer" ? null : "timer")}><Timer className="size-5" /></button>
-            <button className="p-2" aria-label="التظليلات" onClick={() => setPanel(panel === "hl" ? null : "hl")}><Highlighter className="size-5" /></button>
+            {!pdfMode && <button className="p-2" aria-label="التظليلات" onClick={() => setPanel(panel === "hl" ? null : "hl")}><Highlighter className="size-5" /></button>}
             <button className="p-2" aria-label="الخط" onClick={() => setPanel(panel === "type" ? null : "type")}><Type className="size-5" /></button>
           </motion.header>
         )}
       </AnimatePresence>
 
+      {oldPdf && (
+        <div className="reader-ui absolute inset-x-4 top-16 z-20 rounded-xl p-3 text-sm shadow-book">
+          الكتاب ده اتحفظ بالطريقة القديمة. ارجع للمكتبة، احذفه، واستورده تاني عشان يفتح بصفحاته الأصلية.
+        </div>
+      )}
+
+      {pdfMode ? (
+        <PdfView file={book.file!} initial={progress} mode={s.mode} rtl={rtl} ui={ui}
+          onProgress={saveProgress} onToggleUi={() => { setUi(!ui); setPanel(null); }} />
+      ) : (
+      <>
       <div ref={box} onScroll={onScroll} onMouseUp={onSelect} onTouchEnd={() => setTimeout(onSelect, 50)}
         onClick={(e) => {
           if (window.getSelection()?.toString()) return;
@@ -238,6 +263,8 @@ function Reader() {
         <div className="reader-mute flex justify-between text-xs"><span>{Math.round(progress * 100)}%</span><span>{minsLeft} دقيقة متبقية</span></div>
         {ui && <input type="range" min={0} max={1000} value={progress * 1000} onChange={(e) => goTo(+e.target.value / 1000)} className="mt-1 w-full accent-accent" />}
       </div>
+      </>
+      )}
 
       {sel && (
         <div className="reader-ui fixed z-30 flex -translate-x-1/2 -translate-y-full items-center gap-1 rounded-full p-1.5 shadow-book"
