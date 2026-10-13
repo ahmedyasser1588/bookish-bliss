@@ -184,9 +184,9 @@ function PdfPage({ pdf, n, width, height, root, eager }: { pdf: Pdf; n: number; 
   }, [visible, pdf, n, width, eager]);
 
   return (
-    <div ref={wrap} className="relative shrink-0 overflow-hidden rounded bg-white shadow-book" style={{ width, height }}>
+    <div ref={wrap} className="relative shrink-0 overflow-hidden rounded bg-card shadow-book" style={{ width, height }}>
       <canvas ref={canvas} className="block size-full" />
-      {!done && <div className="absolute inset-0 grid place-items-center text-sm text-neutral-400">{n}</div>}
+      {!done && <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">{n}</div>}
     </div>
   );
 }
