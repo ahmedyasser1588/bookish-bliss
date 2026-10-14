@@ -9,7 +9,7 @@ export async function openPdf(data: ArrayBuffer) {
     isOffscreenCanvasSupported: false,
     isImageDecoderSupported: false,
     // decoders for JBIG2 / JPEG2000 scanned images
-    wasmUrl: "/pdfjs-wasm/",
+    wasmUrl: new URL("/pdfjs-wasm/", location.href).href,
   }).promise;
 }
 export type Pdf = Awaited<ReturnType<typeof openPdf>>;
