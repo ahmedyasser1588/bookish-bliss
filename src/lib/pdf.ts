@@ -8,6 +8,8 @@ export async function openPdf(data: ArrayBuffer) {
     // these two avoid blank scanned pages ("Dependent image isn't ready yet") on some browsers
     isOffscreenCanvasSupported: false,
     isImageDecoderSupported: false,
+    // decoders for JBIG2 / JPEG2000 scanned images
+    wasmUrl: "/pdfjs-wasm/",
   }).promise;
 }
 export type Pdf = Awaited<ReturnType<typeof openPdf>>;
