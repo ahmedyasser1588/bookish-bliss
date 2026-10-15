@@ -10,3 +10,5 @@
 <!-- LOVABLE:END -->
 - Books are stored offline in browser IndexedDB (src/lib/db.ts) and parsed client-side (src/lib/parse.ts); reading stats in localStorage — app must work without a backend.
 - PDFs keep the original file in IndexedDB and are rendered page-by-page on demand with pdf.js (src/components/PdfView.tsx) — faster import and exact page look; pdf.js decoders (JBIG2/JPEG2000) are served from public/pdfjs-wasm and passed via wasmUrl, otherwise scanned pages render blank.
+
+- Library atmosphere and reader chrome share semantic tokens in src/styles.css and the shared Button component; keep reading page geometry and offline persistence independent of presentation changes.

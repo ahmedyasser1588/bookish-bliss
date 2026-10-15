@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { openPdf, type Pdf } from "@/lib/pdf";
 
 type Props = {
@@ -123,21 +124,21 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi }
 
       {mode === "page" && ui && (
         <>
-          <button aria-label="السابق" onClick={() => turn(-1)} className="reader-ui absolute start-2 top-1/2 z-10 rounded-full p-2 opacity-70"><ChevronRight className="size-5" /></button>
-          <button aria-label="التالي" onClick={() => turn(1)} className="reader-ui absolute end-2 top-1/2 z-10 rounded-full p-2 opacity-70"><ChevronLeft className="size-5" /></button>
+          <Button variant="ghost" title="السابق" aria-label="السابق" onClick={() => turn(-1)} className="reader-ui reader-page-turn absolute start-2 top-1/2 z-10 p-2 opacity-70"><ChevronRight className="size-5" /></Button>
+          <Button variant="ghost" title="التالي" aria-label="التالي" onClick={() => turn(1)} className="reader-ui reader-page-turn absolute end-2 top-1/2 z-10 p-2 opacity-70"><ChevronLeft className="size-5" /></Button>
         </>
       )}
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-2">
+      <div className="reader-footer pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-2 pt-2">
         <div className="reader-mute flex items-center justify-between text-xs">
           <span>صفحة {page} من {n}</span>
           <span>{Math.round(((page - 1) / Math.max(1, n - 1)) * 100)}%</span>
         </div>
         {ui && (
           <div className="pointer-events-auto mt-1 flex items-center gap-2">
-            <button aria-label="تصغير" className="reader-ui rounded-full p-1.5" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}><ZoomOut className="size-4" /></button>
+            <Button variant="ghost" title="تصغير" aria-label="تصغير" className="reader-ui reader-tool" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}><ZoomOut className="size-4" /></Button>
             <input type="range" min={1} max={n} value={page} onChange={(e) => go(+e.target.value)} className="w-full accent-accent" dir={rtl ? "rtl" : "ltr"} />
-            <button aria-label="تكبير" className="reader-ui rounded-full p-1.5" onClick={() => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))}><ZoomIn className="size-4" /></button>
+            <Button variant="ghost" title="تكبير" aria-label="تكبير" className="reader-ui reader-tool" onClick={() => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))}><ZoomIn className="size-4" /></Button>
           </div>
         )}
       </div>

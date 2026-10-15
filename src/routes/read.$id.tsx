@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { getBook, updateBook, type Book, type Highlight } from "@/lib/db";
 import { addMinute } from "@/lib/stats";
+import { Button } from "@/components/ui/button";
 import { PdfView } from "@/components/PdfView";
 
 export const Route = createFileRoute("/read/$id")({
@@ -16,6 +17,8 @@ export const Route = createFileRoute("/read/$id")({
       { name: "description", content: "وضع قراءة هادئ مع ثيمات وتظليل وقراءة صوتية." },
       { property: "og:title", content: "القراءة — مكتبتي" },
       { property: "og:description", content: "اقرأ كتابك بتركيز وراحة." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Reader,
@@ -204,19 +207,19 @@ function Reader() {
       <AnimatePresence>
         {ui && (
           <motion.header initial={{ y: -60 }} animate={{ y: 0 }} exit={{ y: -60 }}
-            className="reader-ui absolute inset-x-0 top-0 z-20 flex items-center gap-1 px-3 py-2 shadow-book">
-            <Link to="/" className="p-2" aria-label="رجوع"><ArrowRight className="size-5" /></Link>
-            <div className="min-w-0 flex-1 truncate font-semibold">{book.title}</div>
+            className="reader-ui reader-toolbar absolute inset-x-0 top-0 z-20 flex items-center gap-1 px-3 py-2">
+            <Button asChild variant="ghost" className="reader-tool" title="رجوع للمكتبة"><Link to="/" aria-label="رجوع"><ArrowRight className="size-5" /></Link></Button>
+            <div className="reader-title min-w-0 flex-1 truncate font-semibold">{book.title}</div>
             {book.file && book.html && (
-              <button className="p-2" aria-label={orig ? "عرض النص" : "الشكل الأصلي"} title={orig ? "عرض النص" : "الشكل الأصلي للصفحات"} onClick={() => setOrig(!orig)}>
+              <Button variant="ghost" className="reader-tool" aria-label={orig ? "عرض النص" : "الشكل الأصلي"} title={orig ? "عرض النص" : "الشكل الأصلي للصفحات"} onClick={() => setOrig(!orig)}>
                 {orig ? <FileText className="size-5" /> : <FileImage className="size-5" />}
-              </button>
+              </Button>
             )}
-            {!pdfMode && <button className="p-2" aria-label="قراءة صوتية" onClick={speak}>{speaking ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}</button>}
-            {!pdfMode && <button className="p-2" aria-label="تمرير تلقائي" onClick={() => setAuto(!auto)}>{auto ? <Pause className="size-5" /> : <Play className="size-5" />}</button>}
-            <button className="p-2" aria-label="مؤقت" onClick={() => setPanel(panel === "timer" ? null : "timer")}><Timer className="size-5" /></button>
-            {!pdfMode && <button className="p-2" aria-label="التظليلات" onClick={() => setPanel(panel === "hl" ? null : "hl")}><Highlighter className="size-5" /></button>}
-            <button className="p-2" aria-label="الخط" onClick={() => setPanel(panel === "type" ? null : "type")}><Type className="size-5" /></button>
+            {!pdfMode && <Button variant="ghost" className="reader-tool" title="قراءة صوتية" aria-label="قراءة صوتية" onClick={speak}>{speaking ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}</Button>}
+            {!pdfMode && <Button variant="ghost" className="reader-tool" title="تمرير تلقائي" aria-label="تمرير تلقائي" onClick={() => setAuto(!auto)}>{auto ? <Pause className="size-5" /> : <Play className="size-5" />}</Button>}
+            <Button variant="ghost" className="reader-tool" title="مؤقت" aria-label="مؤقت" aria-pressed={panel === "timer"} onClick={() => setPanel(panel === "timer" ? null : "timer")}><Timer className="size-5" /></Button>
+            {!pdfMode && <Button variant="ghost" className="reader-tool" title="التظليلات" aria-label="التظليلات" onClick={() => setPanel(panel === "hl" ? null : "hl")}><Highlighter className="size-5" /></Button>}
+            <Button variant="ghost" className="reader-tool" title="الخط" aria-label="الخط" aria-pressed={panel === "type"} onClick={() => setPanel(panel === "type" ? null : "type")}><Type className="size-5" /></Button>
           </motion.header>
         )}
       </AnimatePresence>
@@ -254,12 +257,12 @@ function Reader() {
 
       {s.mode === "page" && ui && (
         <>
-          <button aria-label="السابق" onClick={() => turn(-1)} className="reader-ui absolute start-2 top-1/2 z-10 rounded-full p-2 opacity-70"><ChevronRight className="size-5" /></button>
-          <button aria-label="التالي" onClick={() => turn(1)} className="reader-ui absolute end-2 top-1/2 z-10 rounded-full p-2 opacity-70"><ChevronLeft className="size-5" /></button>
+          <Button variant="ghost" aria-label="السابق" onClick={() => turn(-1)} className="reader-ui reader-page-turn absolute start-2 top-1/2 z-10 p-2 opacity-70"><ChevronRight className="size-5" /></Button>
+          <Button variant="ghost" aria-label="التالي" onClick={() => turn(1)} className="reader-ui reader-page-turn absolute end-2 top-1/2 z-10 p-2 opacity-70"><ChevronLeft className="size-5" /></Button>
         </>
       )}
 
-      <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-2">
+      <div className="reader-footer absolute inset-x-0 bottom-0 z-10 px-4 pb-2 pt-2">
         <div className="reader-mute flex justify-between text-xs"><span>{Math.round(progress * 100)}%</span><span>{minsLeft} دقيقة متبقية</span></div>
         {ui && <input type="range" min={0} max={1000} value={progress * 1000} onChange={(e) => goTo(+e.target.value / 1000)} className="mt-1 w-full accent-accent" />}
       </div>
@@ -269,37 +272,37 @@ function Reader() {
       {sel && (
         <div className="reader-ui fixed z-30 flex -translate-x-1/2 -translate-y-full items-center gap-1 rounded-full p-1.5 shadow-book"
           style={{ left: Math.min(Math.max(sel.x, 150), window.innerWidth - 150), top: Math.max(sel.y - 8, 110) }}>
-          {COLORS.map(([c, n]) => <button key={c} title={n} onClick={() => addHl(c)} className="size-7 rounded-full" style={{ background: `var(--hl-${c})` }} />)}
-          <button className="p-1.5" title="قاموس" onClick={() => lookup(sel.text)}><BookA className="size-5" /></button>
-          <button className="p-1.5" title="ترجمة" onClick={() => translate(sel.text)}><Languages className="size-5" /></button>
-          <button className="p-1.5" title="نسخ" onClick={() => { navigator.clipboard.writeText(sel.text); setSel(null); }}><Copy className="size-5" /></button>
+          {COLORS.map(([c, n]) => <Button variant="ghost" key={c} title={n} onClick={() => addHl(c)} className="size-7 rounded-full" style={{ background: `var(--hl-${c})` }} />)}
+          <Button variant="ghost" className="p-1.5" title="قاموس" onClick={() => lookup(sel.text)}><BookA className="size-5" /></Button>
+          <Button variant="ghost" className="p-1.5" title="ترجمة" onClick={() => translate(sel.text)}><Languages className="size-5" /></Button>
+          <Button variant="ghost" className="p-1.5" title="نسخ" onClick={() => { navigator.clipboard.writeText(sel.text); setSel(null); }}><Copy className="size-5" /></Button>
         </div>
       )}
 
       <AnimatePresence>
         {panel && (
           <motion.aside initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 26 }}
-            className="reader-ui absolute inset-x-0 bottom-0 z-30 max-h-[70vh] overflow-y-auto rounded-t-3xl p-5 shadow-book">
-            <button className="absolute end-4 top-4" onClick={() => setPanel(null)} aria-label="إغلاق"><X className="size-5" /></button>
+            className="reader-ui reader-panel absolute inset-x-0 bottom-0 z-30 max-h-[70vh] overflow-y-auto rounded-t-xl p-5">
+            <Button variant="ghost" className="reader-tool absolute end-3 top-3" onClick={() => setPanel(null)} aria-label="إغلاق"><X className="size-5" /></Button>
             {panel === "type" && (
               <div className="space-y-4">
                 <h3 className="font-bold">المظهر</h3>
                 <div className="grid grid-cols-4 gap-2">
                   {THEMES.map(([t, n]) => (
-                    <button key={t} onClick={() => set({ theme: t })} data-theme={t}
-                      className={`reader rounded-xl border-2 py-3 text-sm ${s.theme === t ? "border-accent" : "border-transparent"}`}>{n}</button>
+                    <Button variant="ghost" key={t} onClick={() => set({ theme: t })} data-theme={t}
+                      className={`reader reader-choice theme-choice border-2 py-3 text-xs ${s.theme === t ? "border-accent" : "border-transparent"}`} aria-pressed={s.theme === t}><span className="theme-dot" />{n}</Button>
                   ))}
                 </div>
                 <div className="flex gap-2 overflow-x-auto">
                   {FONTS.map((f) => (
-                    <button key={f} onClick={() => set({ font: f })} style={{ fontFamily: f }}
-                      className={`shrink-0 rounded-xl border-2 px-3 py-2 ${s.font === f ? "border-accent" : "border-transparent"}`}>{f === "Georgia" ? "Georgia" : "أبجد Aa"}</button>
+                    <Button variant="ghost" key={f} onClick={() => set({ font: f })} style={{ fontFamily: f }}
+                      className={`reader-choice shrink-0 border-2 px-3 py-2 ${s.font === f ? "border-accent" : "border-transparent"}`}>{f === "Georgia" ? "Georgia" : "أبجد Aa"}</Button>
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {(["page", "scroll"] as const).map((m) => (
-                    <button key={m} onClick={() => set({ mode: m })}
-                      className={`rounded-xl border-2 py-2 ${s.mode === m ? "border-accent" : "border-transparent"}`}>{m === "page" ? "صفحات" : "تمرير مستمر"}</button>
+                    <Button variant="ghost" key={m} onClick={() => set({ mode: m })}
+                      className={`reader-choice border-2 py-2 ${s.mode === m ? "border-accent" : "border-transparent"}`}>{m === "page" ? "صفحات" : "تمرير مستمر"}</Button>
                   ))}
                 </div>
                 {([["size", "حجم الخط", 14, 34, 1], ["line", "تباعد الأسطر", 1.2, 2.6, 0.1], ["spacing", "تباعد الحروف", -1, 4, 0.5], ["margin", "الهوامش", 8, 80, 4], ["speed", "سرعة التمرير التلقائي", 0.3, 5, 0.1]] as const).map(([k, n, mn, mx, st]) => (
@@ -314,8 +317,8 @@ function Reader() {
               <div>
                 <div className="mb-3 flex items-center gap-2">
                   <h3 className="flex-1 font-bold">التظليلات والملاحظات ({book.highlights.length})</h3>
-                  <button onClick={() => exportMd("copy")} className="p-2" title="نسخ"><Copy className="size-5" /></button>
-                  <button onClick={() => exportMd("file")} className="me-8 p-2" title="تصدير Markdown"><Download className="size-5" /></button>
+                  <Button variant="ghost" onClick={() => exportMd("copy")} className="p-2" title="نسخ"><Copy className="size-5" /></Button>
+                  <Button variant="ghost" onClick={() => exportMd("file")} className="me-8 p-2" title="تصدير Markdown"><Download className="size-5" /></Button>
                 </div>
                 {book.highlights.length === 0 && <p className="reader-mute text-sm">حدد أي نص في الكتاب لتظليله.</p>}
                 <div className="space-y-3">
@@ -324,8 +327,8 @@ function Reader() {
                       <p className="text-sm" dir="auto">{h.text}</p>
                       {h.note && <p className="mt-1 text-xs font-semibold">📝 {h.note}</p>}
                       <div className="mt-2 flex gap-3 text-xs">
-                        <button onClick={() => { const n = prompt("ملاحظة", h.note || ""); if (n !== null) editHl(h, { note: n }); }}>تعديل الملاحظة</button>
-                        <button onClick={() => editHl(h, null)}><Trash2 className="size-4" /></button>
+                        <Button variant="ghost" onClick={() => { const n = prompt("ملاحظة", h.note || ""); if (n !== null) editHl(h, { note: n }); }}>تعديل الملاحظة</Button>
+                        <Button variant="ghost" onClick={() => editHl(h, null)}><Trash2 className="size-4" /></Button>
                       </div>
                     </div>
                   ))}
@@ -341,7 +344,7 @@ function Reader() {
         {dict && (
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
             className="reader-ui fixed inset-x-6 top-24 z-40 rounded-2xl p-5 shadow-book" dir="ltr">
-            <button className="absolute right-4 top-4" onClick={() => setDict(null)}><X className="size-5" /></button>
+            <Button variant="ghost" className="absolute right-4 top-4" onClick={() => setDict(null)}><X className="size-5" /></Button>
             <h3 className="text-xl font-bold">{dict.word}</h3>
             <ul className="mt-2 list-disc space-y-1 ps-5 text-sm">{dict.defs.slice(0, 5).map((d, i) => <li key={i}>{d}</li>)}</ul>
           </motion.div>
@@ -374,17 +377,17 @@ function Pomodoro() {
   return (
     <div className="text-center">
       <h3 className="font-bold">جلسة قراءة عميقة</h3>
-      <div className="my-4 font-mono text-5xl font-bold">{String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}</div>
+      <div className="pomodoro-clock my-5 font-mono">{String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}</div>
       <div className="flex justify-center gap-2">
         {[15, 25, 45].map((m) => (
-          <button key={m} onClick={() => { setLen(m); setLeft(m * 60); setRun(false); }}
-            className={`rounded-full border-2 px-3 py-1 text-sm ${len === m ? "border-accent" : "border-transparent"}`}>{m} د</button>
+          <Button variant="ghost" key={m} onClick={() => { setLen(m); setLeft(m * 60); setRun(false); }}
+            className={`rounded-full border-2 px-3 py-1 text-sm ${len === m ? "border-accent" : "border-transparent"}`}>{m} د</Button>
         ))}
       </div>
       <div className="mt-4 flex justify-center gap-3">
-        <button onClick={() => setRun(!run)} className="rounded-full bg-accent px-6 py-2 font-bold text-accent-foreground">{run ? "إيقاف" : "ابدأ"}</button>
-        <button onClick={toggleRain} className={`flex items-center gap-2 rounded-full border-2 px-4 py-2 ${noise ? "border-accent" : ""}`}>
-          <CloudRain className="size-5" /> صوت المطر</button>
+        <Button variant="ghost" onClick={() => setRun(!run)} className="h-11 rounded-lg bg-primary px-6 py-2 font-bold text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground">{run ? <Pause /> : <Play />}{run ? "إيقاف" : "ابدأ"}</Button>
+        <Button variant="ghost" onClick={toggleRain} className={`flex items-center gap-2 rounded-full border-2 px-4 py-2 ${noise ? "border-accent" : ""}`}>
+          <CloudRain className="size-5" /> صوت المطر</Button>
       </div>
     </div>
   );
