@@ -1,6 +1,7 @@
 import { openDB } from "idb";
 
 export type Highlight = { id: string; text: string; color: string; note?: string | undefined; createdAt: number };
+export type Bookmark = { id: string; pos: number; label: string; createdAt: number };
 export type Book = {
   id: string;
   title: string;
@@ -20,6 +21,11 @@ export type Book = {
   addedAt: number;
   lastOpened?: number | undefined;
   highlights: Highlight[];
+  bookmarks?: Bookmark[] | undefined;
+  /** PDF page drawings as PNG data URLs, keyed by page number */
+  drawings?: Record<number, string> | undefined;
+  /** PDF page text notes keyed by page number */
+  pageNotes?: Record<number, string> | undefined;
 };
 
 const dbp = () =>
