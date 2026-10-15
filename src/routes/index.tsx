@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, Flame, Heart, Search, Trash2, Upload, Target, Loader2, ArrowUpLeft, Leaf, Library as LibraryIcon, CheckCheck, Sparkles } from "lucide-react";
+import { BookOpen, Flame, Heart, Search, Trash2, Upload, Target, Loader2, ArrowUpLeft, Leaf, Library as LibraryIcon, CheckCheck, Sparkles, Sprout, Moon, Trophy, Award } from "lucide-react";
 import { deleteBook, getBooks, putBook, type Book } from "@/lib/db";
 import { importFile } from "@/lib/parse";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/")({
   component: Library,
 });
 
+const BADGE_ICONS = [Sprout, Moon, BookOpen, Flame, Trophy];
 const FILTERS = ["الكل", "أقرأ الآن", "انتهيت", "المفضلة", "جديد"] as const;
 const coverTone = (s: string) => [...s].reduce((a, c) => a + c.charCodeAt(0), 0) % 4;
 
@@ -108,7 +109,7 @@ function Library() {
           <div className="flex items-center gap-3 py-3"><div className="relative grid place-items-center"><Ring size={48} value={today / stats.goal} /><Target className="absolute size-4 text-primary" /></div><div><p className="text-[11px] text-muted-foreground">هدف القراءة اليومي</p><div className="mt-1 flex items-baseline gap-1 text-lg font-bold">{today}<span className="text-xs font-normal text-muted-foreground">/</span><select aria-label="هدف القراءة اليومي" value={stats.goal} onChange={(e) => { setGoal(+e.target.value); setStats(getStats()); }} className="goal-select bg-transparent text-sm text-foreground">{[10, 15, 20, 30, 45, 60].map((g) => <option key={g} value={g}>{g}</option>)}</select><span className="text-xs font-normal text-muted-foreground">دقيقة</span></div></div></div>
           <div className="flex items-center gap-3 py-3"><span className="stat-symbol stat-warm"><Flame className="size-5" /></span><div><p className="text-[11px] text-muted-foreground">سلسلة القراءة</p><p className="mt-1 text-lg font-bold">{streak(stats)} <span className="text-xs font-normal text-muted-foreground">يوم متواصل</span></p></div></div>
           <div className="flex items-center gap-3 py-3"><span className="stat-symbol stat-green"><CheckCheck className="size-5" /></span><div><p className="text-[11px] text-muted-foreground">رحلات أتممتها</p><p className="mt-1 text-lg font-bold">{finished} <span className="text-xs font-normal text-muted-foreground">كتاب مكتمل</span></p></div></div>
-          <div className="flex items-center gap-3 py-3"><span className="stat-symbol stat-lilac"><Sparkles className="size-5" /></span><div><p className="text-[11px] text-muted-foreground">هذا الأسبوع · {weekMinutes(stats)} دقيقة</p><div className="mt-1 flex gap-2">{badges(finished).map((b) => <span key={b.name} title={`${b.name}: ${b.desc}`} className={`text-lg ${b.on ? "" : "opacity-25 grayscale"}`}>{b.icon}</span>)}</div></div></div>
+          <div className="flex items-center gap-3 py-3"><span className="stat-symbol stat-lilac"><Sparkles className="size-5" /></span><div><p className="text-[11px] text-muted-foreground">هذا الأسبوع · {weekMinutes(stats)} دقيقة</p><div className="mt-1 flex gap-2">{badges(finished).map((b, i) => { const Icon = BADGE_ICONS[i] || Award; return <span key={b.name} title={`${b.name}: ${b.desc}`} className={`text-primary ${b.on ? "" : "opacity-30"}`}><Icon className="size-4" /></span>; })}</div></div></div>
         </section>}
 
         {continueBook && <section className="continue-strip mt-6 flex items-center gap-4 border-b border-border pb-6">
