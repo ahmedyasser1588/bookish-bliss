@@ -84,6 +84,7 @@ function Library() {
           </div>
           <div className="flex items-center gap-4">
             <span className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex"><Leaf className="size-4 text-primary" /> وقتك الهادئ يبدأ هنا</span>
+            <Button asChild variant="outline" size="lg"><Link to="/stats">إحصائياتي</Link></Button>
             <Button size="lg" onClick={() => input.current?.click()} disabled={!!busy} className="import-button">
               {busy ? <Loader2 className="animate-spin" /> : <Upload />}{busy ? "جارٍ الاستيراد…" : "استيراد كتاب"}
             </Button>
