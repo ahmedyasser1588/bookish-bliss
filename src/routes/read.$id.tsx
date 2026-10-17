@@ -4,9 +4,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight, Type, Highlighter, Timer, Volume2, VolumeX, ChevronLeft, ChevronRight,
   Copy, Download, Languages, BookA, X, Play, Pause, Trash2, CloudRain, FileImage, FileText,
+  Bookmark, BookmarkPlus, Pen,
 } from "lucide-react";
 import { getBook, updateBook, type Book, type Highlight } from "@/lib/db";
-import { addMinute } from "@/lib/stats";
+import { addMinute, addWords } from "@/lib/stats";
 import { Button } from "@/components/ui/button";
 import { PdfView } from "@/components/PdfView";
 
@@ -35,7 +36,9 @@ function Reader() {
   const [book, setBook] = useState<Book | null>(null);
   const [s, setS] = useState<Settings>(DEF);
   const [ui, setUi] = useState(true);
-  const [panel, setPanel] = useState<null | "type" | "hl" | "timer">(null);
+  const [panel, setPanel] = useState<null | "type" | "hl" | "timer" | "bm">(null);
+  const [draw, setDraw] = useState(false);
+  const [jump, setJump] = useState<{ p: number; k: number } | null>(null);
   const [progress, setProgress] = useState(0);
   const [sel, setSel] = useState<{ text: string; x: number; y: number } | null>(null);
   const [dict, setDict] = useState<{ word: string; defs: string[] } | null>(null);
@@ -83,6 +86,7 @@ function Reader() {
   const onScroll = () => {
     const { pos, max } = metrics();
     const p = max > 0 ? Math.min(1, pos / max) : 1;
+    if (book && p > progress && p - progress < 0.2) addWords((p - progress) * book.wordCount);
     setProgress(p);
     clearTimeout(saveT.current);
     saveT.current = setTimeout(() => updateBook(id, { progress: p }), 400);
@@ -197,10 +201,17 @@ function Reader() {
   const pdfMode = !!book.file && (!book.html || orig);
   const oldPdf = book.format === "PDF" && !book.file;
   const saveProgress = (p: number) => {
+    if (p > progress && p - progress < 0.2) addWords((p - progress) * book.wordCount);
     setProgress(p);
     clearTimeout(saveT.current);
     saveT.current = setTimeout(() => updateBook(id, { progress: p }), 400);
   };
+  const saveBms = (bookmarks: NonNullable<Book["bookmarks"]>) => { setBook({ ...book, bookmarks }); updateBook(id, { bookmarks }); };
+  const addBm = () => {
+    const label = book.pages ? `صفحة ${Math.round(progress * (book.pages - 1)) + 1}` : `${Math.round(progress * 100)}%`;
+    saveBms([...(book.bookmarks || []), { id: crypto.randomUUID(), pos: progress, label, createdAt: Date.now() }]);
+  };
+  const jumpTo = (p: number) => { if (pdfMode) setJump({ p, k: Date.now() }); else goTo(p); };
 
   return (
     <div className="reader fixed inset-0 overflow-hidden" data-theme={s.theme}>
@@ -217,6 +228,8 @@ function Reader() {
             )}
             {!pdfMode && <Button variant="ghost" className="reader-tool" title="قراءة صوتية" aria-label="قراءة صوتية" onClick={speak}>{speaking ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}</Button>}
             {!pdfMode && <Button variant="ghost" className="reader-tool" title="تمرير تلقائي" aria-label="تمرير تلقائي" onClick={() => setAuto(!auto)}>{auto ? <Pause className="size-5" /> : <Play className="size-5" />}</Button>}
+            <Button variant="ghost" className="reader-tool" title="العلامات المرجعية" aria-label="العلامات المرجعية" aria-pressed={panel === "bm"} onClick={() => setPanel(panel === "bm" ? null : "bm")}><Bookmark className="size-5" /></Button>
+            {pdfMode && <Button variant="ghost" className="reader-tool" title="رسم وملاحظات" aria-label="رسم وملاحظات" aria-pressed={draw} onClick={() => { setDraw(!draw); setPanel(null); }}><Pen className="size-5" /></Button>}
             <Button variant="ghost" className="reader-tool" title="مؤقت" aria-label="مؤقت" aria-pressed={panel === "timer"} onClick={() => setPanel(panel === "timer" ? null : "timer")}><Timer className="size-5" /></Button>
             {!pdfMode && <Button variant="ghost" className="reader-tool" title="التظليلات" aria-label="التظليلات" onClick={() => setPanel(panel === "hl" ? null : "hl")}><Highlighter className="size-5" /></Button>}
             <Button variant="ghost" className="reader-tool" title="الخط" aria-label="الخط" aria-pressed={panel === "type"} onClick={() => setPanel(panel === "type" ? null : "type")}><Type className="size-5" /></Button>
@@ -232,7 +245,11 @@ function Reader() {
 
       {pdfMode ? (
         <PdfView file={book.file!} initial={progress} mode={s.mode} rtl={rtl} ui={ui}
-          onProgress={saveProgress} onToggleUi={() => { setUi(!ui); setPanel(null); }} />
+          onProgress={saveProgress} onToggleUi={() => { setUi(!ui); setPanel(null); }}
+          jump={jump} draw={draw} onDrawDone={() => setDraw(false)}
+          drawings={book.drawings} notes={book.pageNotes}
+          onSaveDrawing={(pg, u) => { const d = { ...(book.drawings || {}) }; if (u) d[pg] = u; else delete d[pg]; setBook({ ...book, drawings: d }); updateBook(id, { drawings: d }); }}
+          onSaveNote={(pg, t) => { const d = { ...(book.pageNotes || {}) }; if (t.trim()) d[pg] = t.trim(); else delete d[pg]; setBook({ ...book, pageNotes: d }); updateBook(id, { pageNotes: d }); }} />
       ) : (
       <>
       <div ref={box} onScroll={onScroll} onMouseUp={onSelect} onTouchEnd={() => setTimeout(onSelect, 50)}
@@ -336,6 +353,24 @@ function Reader() {
               </div>
             )}
             {panel === "timer" && <Pomodoro />}
+            {panel === "bm" && (
+              <div>
+                <h3 className="mb-3 font-semibold">العلامات المرجعية</h3>
+                <Button className="mb-3" onClick={addBm}><BookmarkPlus className="size-4" /> علّم المكان الحالي</Button>
+                {!(book.bookmarks?.length) && <p className="reader-mute text-sm">مفيش علامات لسه.</p>}
+                <ul className="space-y-2">
+                  {[...(book.bookmarks || [])].sort((a, b) => a.pos - b.pos).map((m) => (
+                    <li key={m.id} className="flex items-center gap-2 rounded-lg border border-border p-2">
+                      <button type="button" className="flex-1 text-start" onClick={() => { jumpTo(m.pos); setPanel(null); }}>
+                        <div className="text-sm font-medium">{m.label}</div>
+                        <div className="reader-mute text-xs">{new Date(m.createdAt).toLocaleDateString("ar-EG")}</div>
+                      </button>
+                      <Button variant="ghost" aria-label="حذف" onClick={() => saveBms((book.bookmarks || []).filter((x) => x.id !== m.id))}><Trash2 className="size-4" /></Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </motion.aside>
         )}
       </AnimatePresence>
