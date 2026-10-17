@@ -247,7 +247,7 @@ function Reader() {
         <PdfView file={book.file!} initial={progress} mode={s.mode} rtl={rtl} ui={ui}
           onProgress={saveProgress} onToggleUi={() => { setUi(!ui); setPanel(null); }}
           jump={jump} draw={draw} onDrawDone={() => setDraw(false)}
-          drawings={book.drawings} notes={book.pageNotes}
+          drawings={book.drawings || {}} notes={book.pageNotes || {}}
           onSaveDrawing={(pg, u) => { const d = { ...(book.drawings || {}) }; if (u) d[pg] = u; else delete d[pg]; setBook({ ...book, drawings: d }); updateBook(id, { drawings: d }); }}
           onSaveNote={(pg, t) => { const d = { ...(book.pageNotes || {}) }; if (t.trim()) d[pg] = t.trim(); else delete d[pg]; setBook({ ...book, pageNotes: d }); updateBook(id, { pageNotes: d }); }} />
       ) : (
