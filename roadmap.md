@@ -1,4 +1,5 @@
-# Visual refresh
-- [x] Refresh the library with a distinctive, relaxing visual identity.
-- [x] Coordinate reader controls and panels without changing PDF rendering or book storage.
-- [x] Verify import, reading, settings, and small-screen layout.
+# Private library and smooth reading
+- [ ] Add username/password accounts with private cloud book storage and offline copies.
+- [ ] Provide explicit upload of existing local books and visible save/retry status.
+- [ ] Improve easy, smooth reader navigation without changing original PDF rendering.
+- [ ] Test sign-up, account isolation, cloud restoration, and reading.
