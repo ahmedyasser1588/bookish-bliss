@@ -1,13 +1,14 @@
+import { accountKey } from "./account";
 type Stats = { days: Record<string, number>; words: Record<string, number>; goal: number; monthGoal: number; night: number };
 const KEY = "maktaba-stats";
 export const dayKey = (d = new Date()) => d.toISOString().slice(0, 10);
 const DEF: Stats = { days: {}, words: {}, goal: 20, monthGoal: 600, night: 0 };
 
 export function getStats(): Stats {
-  try { return { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; }
+  try { return { ...DEF, days: {}, words: {}, ...JSON.parse(localStorage.getItem(accountKey(KEY)) || "{}") }; }
   catch { return { ...DEF }; }
 }
-const save = (s: Stats) => localStorage.setItem(KEY, JSON.stringify(s));
+const save = (s: Stats) => localStorage.setItem(accountKey(KEY), JSON.stringify(s));
 export function addMinute() {
   const s = getStats(); const k = dayKey();
   s.days[k] = (s.days[k] || 0) + 1;

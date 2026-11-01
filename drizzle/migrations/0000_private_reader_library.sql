@@ -1,0 +1,17 @@
+CREATE TABLE public.profiles (id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE, username text NOT NULL UNIQUE CHECK (username ~ '^[a-z0-9_]{3,32}$'));
+GRANT SELECT ON public.profiles TO authenticated;
+GRANT ALL ON public.profiles TO service_role;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY own_profile ON public.profiles FOR SELECT TO authenticated USING (id = auth.uid());
+CREATE FUNCTION public.create_reader_profile() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$ BEGIN INSERT INTO public.profiles(id, username) VALUES (new.id, lower(split_part(new.email, '@', 1))); RETURN new; END; $$;
+REVOKE ALL ON FUNCTION public.create_reader_profile() FROM PUBLIC;
+CREATE TRIGGER reader_profile_signup AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.create_reader_profile();
+CREATE TABLE public.books (id text NOT NULL, user_id uuid NOT NULL, metadata jsonb NOT NULL, file_path text, updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(user_id, id));
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.books TO authenticated;
+GRANT ALL ON public.books TO service_role;
+ALTER TABLE public.books ENABLE ROW LEVEL SECURITY;
+CREATE POLICY own_books ON public.books FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid() AND (file_path IS NULL OR file_path = user_id::text || '/' || id || '.pdf'));
+CREATE POLICY own_book_files_select ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'books' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY own_book_files_insert ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'books' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY own_book_files_update ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'books' AND (storage.foldername(name))[1] = auth.uid()::text) WITH CHECK (bucket_id = 'books' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY own_book_files_delete ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'books' AND (storage.foldername(name))[1] = auth.uid()::text);
