@@ -8,7 +8,8 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
-- Books are stored offline in browser IndexedDB (src/lib/db.ts) and parsed client-side (src/lib/parse.ts); reading stats in localStorage — app must work without a backend.
+- Books are parsed client-side and cached in account-scoped IndexedDB; signed-in libraries sync to private Cloud storage and owner-only rows, preserving guest books for explicit migration and offline reading.
+- Account identity is coordinated by the root AccountProvider; username credentials map deterministically to synthetic emails and profile uniqueness, while local stats/settings are account-scoped to prevent cross-account leakage.
 - PDFs keep the original file in IndexedDB and are rendered page-by-page on demand with pdf.js (src/components/PdfView.tsx) — faster import and exact page look; pdf.js decoders (JBIG2/JPEG2000) are served from public/pdfjs-wasm and passed via wasmUrl, otherwise scanned pages render blank.
 
 - Library atmosphere and reader chrome share semantic tokens in src/styles.css and the shared Button component; keep reading page geometry and offline persistence independent of presentation changes.

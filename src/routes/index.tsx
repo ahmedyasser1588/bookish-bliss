@@ -7,6 +7,7 @@ import { importFile } from "@/lib/parse";
 import { Button } from "@/components/ui/button";
 import retreat from "@/assets/reading-retreat.jpg";
 import { badges, dayKey, getStats, setGoal, streak, weekMinutes } from "@/lib/stats";
+import { AccountControls } from "@/components/AccountControls";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -48,7 +49,13 @@ function Library() {
   const input = useRef<HTMLInputElement>(null);
 
   const load = () => getBooks().then((b) => setBooks(b.sort((a, z) => (z.lastOpened || z.addedAt) - (a.lastOpened || a.addedAt))));
-  useEffect(() => { load(); setStats(getStats()); }, []);
+  useEffect(() => {
+    load(); setStats(getStats());
+    const refresh = () => { void load(); };
+    const sync = (e: Event) => { if ((e as CustomEvent).detail === "saved") refresh(); };
+    window.addEventListener("library-restored", refresh); window.addEventListener("library-sync", sync);
+    return () => { window.removeEventListener("library-restored", refresh); window.removeEventListener("library-sync", sync); };
+  }, []);
 
   const handle = async (files: FileList | File[]) => {
     for (const f of Array.from(files)) {
@@ -94,6 +101,7 @@ function Library() {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-5 sm:px-8">
+        <AccountControls />
         <section className="retreat-banner relative mt-7 overflow-hidden" aria-label="مساحتك للقراءة">
           <img src={retreat} alt="بحيرة هادئة بين الأشجار وركن للقراءة" width={1920} height={768} className="absolute inset-0 size-full object-cover" />
           <div className="retreat-shade absolute inset-0" />
