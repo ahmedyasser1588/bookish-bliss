@@ -13,7 +13,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let alive = true;
     const apply = (next: User | null) => { if (!alive) return; setScope(next?.id || null); setUser(next); setReady(true); };
-    void supabase.auth.getUser().then(({ data }) => apply(data.user));
+    if (navigator.onLine) void supabase.auth.getUser().then(({ data }) => apply(data.user));
+    else void supabase.auth.getSession().then(({ data }) => apply(data.session?.user || null));
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       if (getScope() !== (session?.user.id || "guest")) queryClient.clear();

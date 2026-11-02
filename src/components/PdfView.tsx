@@ -37,6 +37,7 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
   const [size, setSize] = useState({ w: 0, h: 0 });
   const jumped = useRef(false);
   const touch = useRef<number | null>(null);
+  const swiped = useRef(false);
 
   useEffect(() => {
     let doc: Pdf | null = null; let dead = false;
@@ -62,8 +63,8 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
   }, [box]);
 
   const n = pdf?.numPages || 1;
-  const fitW = Math.min(size.w - 16, 900);
-  const pageW = mode === "page" ? Math.min(fitW, (size.h - 100) / ratio) * zoom : fitW * zoom;
+  const fitW = Math.max(1, Math.min(size.w - 16, 900));
+  const pageW = mode === "page" ? Math.max(1, Math.min(fitW, (size.h - 104) / ratio)) * zoom : fitW * zoom;
   const pageH = pageW * ratio;
 
   const go = (p: number) => {
@@ -87,6 +88,7 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.closest("input,textarea,select,[contenteditable=true]") || draw) return;
       if (e.key === "ArrowLeft") turn(rtl ? 1 : -1);
       if (e.key === "ArrowRight") turn(rtl ? -1 : 1);
     };
@@ -106,17 +108,19 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
         dir="ltr"
         onScroll={onScroll}
         onClick={(e) => {
-          if (draw) return;
+          if (draw || (e.target as HTMLElement).closest("button,input,textarea,select,a")) return;
+          if (swiped.current) { swiped.current = false; return; }
           const x = e.clientX / window.innerWidth;
           if (mode === "page" && x < 0.28) turn(rtl ? 1 : -1);
           else if (mode === "page" && x > 0.72) turn(rtl ? -1 : 1);
           else onToggleUi();
         }}
-        onTouchStart={(e) => { touch.current = e.touches[0]?.clientX ?? null; }}
+        onTouchStart={(e) => { swiped.current = false; touch.current = e.touches[0]?.clientX ?? null; }}
         onTouchEnd={(e) => {
           const s = touch.current; const x = e.changedTouches[0]?.clientX;
           touch.current = null;
           if (draw || mode !== "page" || zoom !== 1 || s == null || x == null || Math.abs(x - s) < 60) return;
+          swiped.current = true;
           turn((x - s > 0) === rtl ? 1 : -1);
         }}
         className="absolute inset-0 overflow-auto"
@@ -153,8 +157,8 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
 
       {mode === "page" && ui && !draw && (
         <>
-          <Button variant="ghost" title="السابق" aria-label="السابق" onClick={() => turn(-1)} className="reader-ui reader-page-turn absolute start-2 top-1/2 z-10 p-2 opacity-70"><ChevronRight className="size-5" /></Button>
-          <Button variant="ghost" title="التالي" aria-label="التالي" onClick={() => turn(1)} className="reader-ui reader-page-turn absolute end-2 top-1/2 z-10 p-2 opacity-70"><ChevronLeft className="size-5" /></Button>
+          <Button variant="ghost" title="السابق" aria-label="السابق" disabled={page === 1} onClick={() => turn(-1)} className="reader-ui reader-page-turn absolute start-2 top-1/2 z-10 p-2 opacity-70"><ChevronRight className="size-5" /></Button>
+          <Button variant="ghost" title="التالي" aria-label="التالي" disabled={page === n} onClick={() => turn(1)} className="reader-ui reader-page-turn absolute end-2 top-1/2 z-10 p-2 opacity-70"><ChevronLeft className="size-5" /></Button>
         </>
       )}
 

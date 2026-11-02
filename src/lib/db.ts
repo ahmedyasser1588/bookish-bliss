@@ -92,6 +92,7 @@ async function syncScope(scope: string) {
     if (authError || auth.user?.id !== scope) throw new Error("سجّل الدخول لحفظ الكتب.");
     const db = await dbp(scope);
     for (const key of await db.getAllKeys("deleted")) {
+      if (getScope() !== scope) throw new Error("Account changed");
       const id = String(key);
       const { error } = await supabase.from("books").delete().eq("user_id", scope).eq("id", id);
       if (error) throw error;
@@ -100,6 +101,7 @@ async function syncScope(scope: string) {
       await db.delete("deleted", key);
     }
     for (const book of await db.getAll("books") as Book[]) {
+      if (getScope() !== scope) throw new Error("Account changed");
       if (!book.pending) continue;
       const { file, pending: _pending, cloudFile: _cloudFile, ...metadata } = book;
       const path = file || book.cloudFile ? `${scope}/${book.id}.pdf` : null;
@@ -118,7 +120,8 @@ async function syncScope(scope: string) {
       await tx.done;
     }
     for (let start = 0; ; start += 1000) {
-      const { data, error } = await supabase.from("books").select("id, metadata, file_path").order("id").range(start, start + 999);
+      if (getScope() !== scope) throw new Error("Account changed");
+      const { data, error } = await supabase.from("books").select("id, metadata, file_path").eq("user_id", scope).order("id").range(start, start + 999);
       if (error) throw error;
       for (const row of data) {
         const tx = db.transaction(["books", "deleted"], "readwrite");
