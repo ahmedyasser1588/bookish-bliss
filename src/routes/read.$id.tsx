@@ -10,6 +10,7 @@ import { getBook, updateBook, type Book, type Highlight } from "@/lib/db";
 import { addMinute, addWords } from "@/lib/stats";
 import { Button } from "@/components/ui/button";
 import { PdfView } from "@/components/PdfView";
+import { accountKey, getScope } from "@/lib/account";
 
 export const Route = createFileRoute("/read/$id")({
   head: () => ({
@@ -34,6 +35,7 @@ const COLORS: [string, string][] = [["yellow", "فكرة"], ["green", "اقتب�
 function Reader() {
   const { id } = Route.useParams();
   const [book, setBook] = useState<Book | null>(null);
+  const [openError, setOpenError] = useState("");
   const [s, setS] = useState<Settings>(DEF);
   const [ui, setUi] = useState(true);
   const [panel, setPanel] = useState<null | "type" | "hl" | "timer" | "bm">(null);
@@ -49,12 +51,13 @@ function Reader() {
   const restored = useRef(false);
 
   useEffect(() => {
-    try { setS({ ...DEF, ...JSON.parse(localStorage.getItem("maktaba-settings") || "{}") }); } catch { /* ignore */ }
-    getBook(id).then((b) => { if (b) { setBook(b); setProgress(b.progress); updateBook(id, { lastOpened: Date.now() }); } });
+    let active = true; restored.current = false; setBook(null); setOpenError("");
+    try { setS({ ...DEF, ...JSON.parse(localStorage.getItem(accountKey("maktaba-settings")) || "{}") }); } catch { /* ignore */ }
+    getBook(id).then((b) => { if (!active) return; if (b) { setBook(b); setProgress(b.progress); void updateBook(id, { lastOpened: Date.now() }); } else setOpenError("الكتاب مش موجود في المكتبة الحالية؛ ارجع للمكتبة وانتظر تحميل كتب حسابك."); }).catch((e) => { if (active) setOpenError((e as Error).message); });
     const t = setInterval(() => document.visibilityState === "visible" && addMinute(), 60000);
-    return () => { clearInterval(t); speechSynthesis?.cancel(); };
+    return () => { active = false; clearInterval(t); speechSynthesis?.cancel(); };
   }, [id]);
-  const set = (p: Partial<Settings>) => setS((o) => { const n = { ...o, ...p }; localStorage.setItem("maktaba-settings", JSON.stringify(n)); return n; });
+  const set = (p: Partial<Settings>) => setS((o) => { const n = { ...o, ...p }; localStorage.setItem(accountKey("maktaba-settings"), JSON.stringify(n)); return n; });
 
   const rtl = book?.dir === "rtl";
   const sign = rtl ? -1 : 1;
@@ -83,12 +86,24 @@ function Reader() {
   }, [book, s.mode, s.size, s.line, s.margin, s.font, s.spacing]);
 
   const saveT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pendingProgress = useRef<number | null>(null);
+  useEffect(() => {
+    const scope = getScope();
+    const flush = () => {
+      clearTimeout(saveT.current);
+      const p = pendingProgress.current; pendingProgress.current = null;
+      if (p !== null && getScope() === scope) void updateBook(id, { progress: p });
+    };
+    window.addEventListener("pagehide", flush);
+    return () => { window.removeEventListener("pagehide", flush); flush(); };
+  }, [id]);
   const onScroll = () => {
     const { pos, max } = metrics();
     const p = max > 0 ? Math.min(1, pos / max) : 1;
     if (book && p > progress && p - progress < 0.2) addWords((p - progress) * book.wordCount);
     setProgress(p);
     clearTimeout(saveT.current);
+    pendingProgress.current = p;
     saveT.current = setTimeout(() => updateBook(id, { progress: p }), 400);
   };
 
@@ -196,13 +211,14 @@ function Reader() {
     else { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([md], { type: "text/markdown" })); a.download = `${book.title}-highlights.md`; a.click(); }
   };
 
-  if (!book) return <div className="reader grid min-h-screen place-items-center" data-theme={s.theme}>جارٍ فتح الكتاب…</div>;
+  if (!book) return <div className="reader grid min-h-screen place-items-center" data-theme={s.theme}><div className="max-w-sm px-6 text-center">{openError || "جارٍ فتح الكتاب…"}{openError && <Button asChild variant="outline" className="mt-4"><Link to="/">رجوع للمكتبة</Link></Button>}</div></div>;
   const minsLeft = Math.ceil((book.wordCount * (1 - progress)) / 200);
   const pdfMode = !!book.file && (!book.html || orig);
   const oldPdf = book.format === "PDF" && !book.file;
   const saveProgress = (p: number) => {
     if (p > progress && p - progress < 0.2) addWords((p - progress) * book.wordCount);
     setProgress(p);
+    pendingProgress.current = p;
     clearTimeout(saveT.current);
     saveT.current = setTimeout(() => updateBook(id, { progress: p }), 400);
   };
@@ -244,7 +260,7 @@ function Reader() {
       )}
 
       {pdfMode ? (
-        <PdfView file={book.file!} initial={progress} mode={s.mode} rtl={rtl} ui={ui}
+        <PdfView file={book.file || new Blob()} initial={progress} mode={s.mode} rtl={rtl} ui={ui}
           onProgress={saveProgress} onToggleUi={() => { setUi(!ui); setPanel(null); }}
           jump={jump} draw={draw} onDrawDone={() => setDraw(false)}
           drawings={book.drawings || {}} notes={book.pageNotes || {}}
@@ -254,6 +270,7 @@ function Reader() {
       <>
       <div ref={box} onScroll={onScroll} onMouseUp={onSelect} onTouchEnd={() => setTimeout(onSelect, 50)}
         onClick={(e) => {
+          if ((e.target as HTMLElement).closest("a,button,input,textarea,select")) return;
           if (window.getSelection()?.toString()) return;
           const x = e.clientX / window.innerWidth;
           if (s.mode === "page" && x < 0.25) turn(rtl ? 1 : -1);
