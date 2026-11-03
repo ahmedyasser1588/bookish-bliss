@@ -109,7 +109,7 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
     const t = Math.min(n, Math.max(1, p));
     setPage(t);
     onProgress(n > 1 ? (t - 1) / (n - 1) : 1);
-    if (mode === "scroll" && box) box.scrollTo({ top: 64 + (t - 1) * (pageH + GAP), behavior: smooth && Math.abs(t - page) <= 2 ? "smooth" : "auto" });
+    if (mode === "scroll" && box) box.scrollTo({ top: 64 + (t - 1) * (effH + GAP), behavior: smooth && Math.abs(t - page) <= 2 ? "smooth" : "auto" });
   };
   const turn = (d: number) => { navDir.current = d; go(page + d, true); };
   const setZoomAt = (next: number, ax?: number, ay?: number) => {
