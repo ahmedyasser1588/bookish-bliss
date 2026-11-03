@@ -97,12 +97,13 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
 
   const n = pdf?.numPages || 1;
   const fitW = Math.max(1, Math.min(size.w - 16, 1200));
+  const [fitMode, setFitMode] = useState<"width" | "page">("page");
   // zoom base: fit-width or fit-whole-page in single mode; width-fit in continuous mode
-  const baseW = mode === "page"
-    ? (fitW * 0 + (Math.min(fitW, (size.h - 104) / ratio) === 0 ? 0 : Math.min(fitW, (size.h - 104) / ratio)))
+  const effBase = mode === "page"
+    ? (fitMode === "width" ? fitW : Math.min(fitW, Math.max(1, (size.h - 104) / ratio)))
     : fitW;
-  const pageW = Math.max(1, baseW * zoom);
-  const pageH = pageW * ratio;
+  const effW = Math.max(1, effBase * zoom);
+  const effH = effW * ratio;
 
   const go = (p: number, smooth = false) => {
     const t = Math.min(n, Math.max(1, p));
@@ -125,12 +126,6 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
   };
   const zoomBy = (d: number) => setZoomAt(zoomRef.current + d);
   const setFit = (f: "width" | "page") => { setFitMode(f); setZoomAt(1); };
-  const [fitMode, setFitMode] = useState<"width" | "page">("page");
-  const effBase = mode === "page"
-    ? (fitMode === "width" ? fitW : Math.min(fitW, Math.max(1, (size.h - 104) / ratio)))
-    : fitW;
-  const effW = Math.max(1, effBase * zoom);
-  const effH = effW * ratio;
 
   useEffect(() => { if (jump && pdf) { navDir.current = 0; go(Math.round(jump.p * (n - 1)) + 1); } // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jump?.k, pdf]);
