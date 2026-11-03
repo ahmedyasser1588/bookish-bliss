@@ -262,6 +262,7 @@ function Reader() {
       {pdfMode ? (
         <PdfView file={book.file || new Blob()} initial={progress} mode={s.mode} rtl={rtl} ui={ui}
           onProgress={saveProgress} onToggleUi={() => { setUi(!ui); setPanel(null); }}
+          onModeChange={(m) => set({ mode: m })}
           jump={jump} draw={draw} onDrawDone={() => setDraw(false)}
           drawings={book.drawings || {}} notes={book.pageNotes || {}}
           onSaveDrawing={(pg, u) => { const d = { ...(book.drawings || {}) }; if (u) d[pg] = u; else delete d[pg]; setBook({ ...book, drawings: d }); updateBook(id, { drawings: d }); }}

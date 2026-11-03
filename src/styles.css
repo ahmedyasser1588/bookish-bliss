@@ -166,6 +166,21 @@
   .reader-panel { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
   .retreat-banner img { object-position: 58% center; }
 }
+
+/* Acrobat-style PDF controls */
+.pdf-scrollbox { overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: color-mix(in oklch, var(--r-mute) 30%, transparent) transparent; }
+.pdf-page-box { font-variant-numeric: tabular-nums; }
+.pdf-page-input { width: 52px; height: 30px; text-align: center; font-size: 12px; border: 1px solid color-mix(in oklch, var(--r-mute) 25%, transparent); border-radius: 6px; background: transparent; color: var(--r-fg); font-variant-numeric: tabular-nums; }
+.pdf-page-input:focus { outline: 2px solid color-mix(in oklch, var(--accent) 55%, transparent); }
+.pdf-page-input::-webkit-outer-spin-button, .pdf-page-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pdf-zoom-value { width: 46px; height: 30px; padding: 4px; font-size: 11px; color: var(--r-fg); font-variant-numeric: tabular-nums; }
+.pdf-divider { width: 1px; height: 20px; flex-shrink: 0; background: color-mix(in oklch, var(--r-mute) 25%, transparent); margin-inline: 3px; }
+@media (max-width: 640px) {
+  .pdf-controls { gap: 2px; }
+  .pdf-page-input { width: 44px; }
+  .pdf-zoom-value { width: 40px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }

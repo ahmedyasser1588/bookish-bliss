@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Pen, Highlighter, Eraser, StickyNote, Check, Undo2 } from "lucide-react";
+import { MotionConfig, motion } from "framer-motion";
+import {
+  ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Pen, Highlighter, Eraser, StickyNote, Check, Undo2,
+  Maximize, Minimize, MoveHorizontal, Square, BookOpen,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { openPdf, type Pdf } from "@/lib/pdf";
 
@@ -11,6 +15,7 @@ type Props = {
   ui: boolean;
   onProgress: (p: number) => void;
   onToggleUi: () => void;
+  onModeChange?: (m: "page" | "scroll") => void;
   jump?: { p: number; k: number } | null;
   draw?: boolean;
   onDrawDone?: () => void;
@@ -24,20 +29,33 @@ export type Tool = { kind: "pen" | "marker" | "eraser"; color: string };
 const INKS = ["#1f2937", "#c2410c", "#2563eb", "#15803d", "#facc15"];
 
 const GAP = 12;
+const MIN_Z = 0.4;
+const MAX_Z = 4;
+const clampZ = (z: number) => Math.min(MAX_Z, Math.max(MIN_Z, z));
 
-/** Shows the original PDF pages directly (like a normal PDF viewer), rendering only the pages on screen. */
-export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, jump, draw, onDrawDone, drawings = {}, notes = {}, onSaveDrawing, onSaveNote }: Props) {
+/** Acrobat-style PDF reader: sharp on-demand page rendering, fit-width/fit-page,
+ *  pinch + ctrl-wheel + double-tap zoom, single page with smooth transitions or
+ *  continuous scroll, a page box for navigation, and full-screen reading. */
+export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, onModeChange, jump, draw, onDrawDone, drawings = {}, notes = {}, onSaveDrawing, onSaveNote }: Props) {
   const [tool, setTool] = useState<Tool>({ kind: "pen", color: INKS[1]! });
   const [pdf, setPdf] = useState<Pdf | null>(null);
   const [err, setErr] = useState("");
   const [ratio, setRatio] = useState(1.414);
   const [zoom, setZoom] = useState(1);
   const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
   const [box, setBox] = useState<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const [fs, setFs] = useState(false);
   const jumped = useRef(false);
   const touch = useRef<number | null>(null);
   const swiped = useRef(false);
+  const zoomRef = useRef(1);
+  const navDir = useRef(0);
+  const pinchedAt = useRef(0);
+  const ptrs = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ d0: number; z0: number; mx: number; my: number } | null>(null);
+  const pan = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     let doc: Pdf | null = null; let dead = false;
@@ -62,83 +80,209 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
     ro.observe(box); return () => ro.disconnect();
   }, [box]);
 
-  const n = pdf?.numPages || 1;
-  const fitW = Math.max(1, Math.min(size.w - 16, 900));
-  const pageW = mode === "page" ? Math.max(1, Math.min(fitW, (size.h - 104) / ratio)) * zoom : fitW * zoom;
-  const pageH = pageW * ratio;
+  useEffect(() => setPageInput(String(page)), [page]);
 
-  const go = (p: number) => {
+  // full-screen reading
+  useEffect(() => {
+    const h = () => setFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", h);
+    return () => document.removeEventListener("fullscreenchange", h);
+  }, []);
+  const toggleFs = () => {
+    try {
+      if (document.fullscreenElement) void document.exitFullscreen();
+      else void document.documentElement.requestFullscreen?.();
+    } catch { /* unsupported (e.g. iOS Safari) — the hide-UI mode still gives an immersive view */ }
+  };
+
+  const n = pdf?.numPages || 1;
+  const fitW = Math.max(1, Math.min(size.w - 16, 1200));
+  const [fitMode, setFitMode] = useState<"width" | "page">("page");
+  // zoom base: fit-width or fit-whole-page in single mode; width-fit in continuous mode
+  const effBase = mode === "page"
+    ? (fitMode === "width" ? fitW : Math.min(fitW, Math.max(1, (size.h - 104) / ratio)))
+    : fitW;
+  const effW = Math.max(1, effBase * zoom);
+  const effH = effW * ratio;
+
+  const go = (p: number, smooth = false) => {
     const t = Math.min(n, Math.max(1, p));
     setPage(t);
     onProgress(n > 1 ? (t - 1) / (n - 1) : 1);
-    if (mode === "scroll" && box) box.scrollTop = 64 + (t - 1) * (pageH + GAP);
+    if (mode === "scroll" && box) box.scrollTo({ top: 64 + (t - 1) * (effH + GAP), behavior: smooth && Math.abs(t - page) <= 2 ? "smooth" : "auto" });
   };
-  const turn = (d: number) => go(page + d);
-  useEffect(() => { if (jump && pdf) go(Math.round(jump.p * (n - 1)) + 1); // eslint-disable-next-line react-hooks/exhaustive-deps
+  const turn = (d: number) => { navDir.current = d; go(page + d, true); };
+  const setZoomAt = (next: number, ax?: number, ay?: number) => {
+    next = clampZ(next);
+    const el = box; const z = zoomRef.current;
+    if (el && next !== z) {
+      const k = next / z;
+      const px = ax ?? el.clientWidth / 2, py = ay ?? el.clientHeight / 2;
+      el.scrollLeft = (el.scrollLeft + px) * k - px;
+      el.scrollTop = (el.scrollTop + py) * k - py;
+    }
+    zoomRef.current = next;
+    setZoom(next);
+  };
+  const zoomBy = (d: number) => setZoomAt(zoomRef.current + d);
+  const setFit = (f: "width" | "page") => { setFitMode(f); setZoomAt(1); };
+
+  useEffect(() => { if (jump && pdf) { navDir.current = 0; go(Math.round(jump.p * (n - 1)) + 1); } // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jump?.k, pdf]);
   const pageProps = (i: number) => ({ tool: draw ? tool : null, drawing: drawings[i], note: notes[i], onSave: (u: string | null) => onSaveDrawing?.(i, u) });
 
   // jump to saved page once ready / when layout changes
   useEffect(() => {
     if (!pdf || !box || !size.w) return;
-    if (mode === "scroll") box.scrollTop = 64 + (page - 1) * (pageH + GAP);
+    if (mode === "scroll") box.scrollTop = 64 + (page - 1) * (effH + GAP);
     jumped.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pdf, box, size.w, mode, zoom]);
+  }, [pdf, box, size.w, mode, effW]);
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest("input,textarea,select,[contenteditable=true]") || draw) return;
       if (e.key === "ArrowLeft") turn(rtl ? 1 : -1);
       if (e.key === "ArrowRight") turn(rtl ? -1 : 1);
+      if (e.key === "Home") go(1);
+      if (e.key === "End") go(n);
+      if (e.key === "+" || e.key === "=") zoomBy(0.25);
+      if (e.key === "-") zoomBy(-0.25);
+      if (e.key === "0") setZoomAt(1);
     };
     window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
   });
 
+  // ctrl/⌘ + wheel zooms around the cursor (trackpad pinch), normal wheel scrolls natively
+  useEffect(() => {
+    const el = box; if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const r = el.getBoundingClientRect();
+      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+      setZoomAt(zoomRef.current * Math.exp(-dy * 0.0015), e.clientX - r.left, e.clientY - r.top);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [box]);
+
+  const rel = (e: { clientX: number; clientY: number }) => {
+    const r = box!.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (draw || e.pointerType === "mouse" || !box) return;
+    ptrs.current.set(e.pointerId, rel(e));
+    try { box.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    if (ptrs.current.size === 2) {
+      const [a, b] = [...ptrs.current.values()];
+      pinch.current = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: zoomRef.current, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+      pan.current = null;
+      swiped.current = true;
+    } else if (ptrs.current.size === 1 && zoomRef.current > 1) {
+      pan.current = rel(e);
+    }
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (draw || e.pointerType === "mouse" || !box || !ptrs.current.has(e.pointerId)) return;
+    const p = rel(e); ptrs.current.set(e.pointerId, p);
+    if (pinch.current && ptrs.current.size >= 2) {
+      const [a, b] = [...ptrs.current.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const next = clampZ(pinch.current.z0 * (d / pinch.current.d0));
+      const k = next / zoomRef.current;
+      box.scrollLeft = (box.scrollLeft + mx) * k - mx;
+      box.scrollTop = (box.scrollTop + my) * k - my;
+      box.scrollLeft -= mx - pinch.current.mx;
+      box.scrollTop -= my - pinch.current.my;
+      pinch.current.mx = mx; pinch.current.my = my;
+      zoomRef.current = next; setZoom(next);
+    } else if (pan.current && zoomRef.current > 1) {
+      if (mode === "scroll") box.scrollLeft -= p.x - pan.current.x;
+      else { box.scrollLeft -= p.x - pan.current.x; box.scrollTop -= p.y - pan.current.y; }
+      pan.current = p;
+    }
+  };
+  const onPointerGone = (e: React.PointerEvent) => {
+    ptrs.current.delete(e.pointerId);
+    if (ptrs.current.size < 2) { if (pinch.current) pinchedAt.current = Date.now(); pinch.current = null; }
+    if (ptrs.current.size === 0) pan.current = null;
+  };
+
   const onScroll = () => {
     if (mode !== "scroll" || !box || !jumped.current) return;
-    const p = Math.min(n, Math.floor((box.scrollTop - 64 + box.clientHeight / 2) / (pageH + GAP)) + 1);
+    const p = Math.min(n, Math.floor((box.scrollTop - 64 + box.clientHeight / 2) / (effH + GAP)) + 1);
     if (p !== page && p >= 1) { setPage(p); onProgress(n > 1 ? (p - 1) / (n - 1) : 1); }
   };
 
+  const commitPage = () => {
+    const v = parseInt(pageInput, 10);
+    if (Number.isFinite(v)) { navDir.current = 0; go(v, true); } else setPageInput(String(page));
+  };
+
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       <div
         ref={setBox}
         dir="ltr"
         onScroll={onScroll}
+        className="pdf-scrollbox absolute inset-0 overflow-auto"
+        style={{ padding: mode === "page" ? "56px 8px 56px" : "64px 8px 88px", touchAction: mode === "page" ? "none" : "pan-y" }}
         onClick={(e) => {
           if (draw || (e.target as HTMLElement).closest("button,input,textarea,select,a")) return;
           if (swiped.current) { swiped.current = false; return; }
+          if (Date.now() - pinchedAt.current < 350) return;
           const x = e.clientX / window.innerWidth;
           if (mode === "page" && x < 0.28) turn(rtl ? 1 : -1);
           else if (mode === "page" && x > 0.72) turn(rtl ? -1 : 1);
           else onToggleUi();
         }}
+        onDoubleClick={(e) => {
+          if (draw) return;
+          const r = box!.getBoundingClientRect();
+          if (zoomRef.current > 1.2) setZoomAt(1);
+          else setZoomAt(2.2, e.clientX - r.left, e.clientY - r.top);
+        }}
         onTouchStart={(e) => { swiped.current = false; touch.current = e.touches[0]?.clientX ?? null; }}
         onTouchEnd={(e) => {
           const s = touch.current; const x = e.changedTouches[0]?.clientX;
           touch.current = null;
-          if (draw || mode !== "page" || zoom !== 1 || s == null || x == null || Math.abs(x - s) < 60) return;
+          if (draw || mode !== "page" || zoomRef.current !== 1 || s == null || x == null || Math.abs(x - s) < 60) return;
           swiped.current = true;
           turn((x - s > 0) === rtl ? 1 : -1);
         }}
-        className="absolute inset-0 overflow-auto"
-        style={{ padding: mode === "page" ? "56px 8px 48px" : "64px 8px 80px" }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerGone}
+        onPointerCancel={onPointerGone}
       >
         {err && <p className="mt-24 text-center">تعذر فتح الملف: {err}</p>}
         {!pdf && !err && <p className="reader-mute mt-24 text-center">جارٍ فتح الكتاب…</p>}
         {pdf && size.w > 0 && (mode === "page" ? (
           <div className="flex min-h-full items-center justify-center">
-            <PdfPage key={page} pdf={pdf} n={page} width={pageW} height={pageH} root={null} eager {...pageProps(page)} />
+            <motion.div
+              key={page}
+              initial={{ opacity: 0, x: navDir.current === 0 ? 0 : navDir.current * (rtl ? -1 : 1) * 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.24, ease: "easeOut" }}
+            >
+              <PdfPage pdf={pdf} n={page} width={effW} height={effH} root={null} eager {...pageProps(page)} />
+            </motion.div>
           </div>
         ) : (
           <div className="flex flex-col items-center" style={{ gap: GAP }}>
             {Array.from({ length: n }, (_, i) => (
-              <PdfPage key={i} pdf={pdf} n={i + 1} width={pageW} height={pageH} root={box} {...pageProps(i + 1)} />
+              <PdfPage key={i} pdf={pdf} n={i + 1} width={effW} height={effH} root={box} {...pageProps(i + 1)} />
             ))}
           </div>
         ))}
+      </div>
+
+      {/* thin reading-progress line */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 h-[3px]">
+        <div className="h-full bg-accent/70 transition-[width] duration-300" style={{ width: `${(page / n) * 100}%` }} />
       </div>
 
       {draw && (
@@ -157,25 +301,48 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
 
       {mode === "page" && ui && !draw && (
         <>
-          <Button variant="ghost" title="السابق" aria-label="السابق" disabled={page === 1} onClick={() => turn(-1)} className="reader-ui reader-page-turn absolute start-2 top-1/2 z-10 p-2 opacity-70"><ChevronRight className="size-5" /></Button>
-          <Button variant="ghost" title="التالي" aria-label="التالي" disabled={page === n} onClick={() => turn(1)} className="reader-ui reader-page-turn absolute end-2 top-1/2 z-10 p-2 opacity-70"><ChevronLeft className="size-5" /></Button>
+          <Button variant="ghost" title="السابق" aria-label="السابق" disabled={page === 1} onClick={() => turn(rtl ? 1 : -1)} className="reader-ui reader-page-turn absolute start-2 top-1/2 z-10 p-2 opacity-70"><ChevronRight className="size-5" /></Button>
+          <Button variant="ghost" title="التالي" aria-label="التالي" disabled={page === n} onClick={() => turn(rtl ? -1 : 1)} className="reader-ui reader-page-turn absolute end-2 top-1/2 z-10 p-2 opacity-70"><ChevronLeft className="size-5" /></Button>
         </>
       )}
 
-      <div className="reader-footer pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-2 pt-2">
+      <div className="reader-footer pointer-events-none absolute inset-x-0 bottom-0 z-20 px-3 pb-2 pt-2">
         <div className="reader-mute flex items-center justify-between text-xs">
           <span>صفحة {page} من {n}</span>
           <span>{Math.round(((page - 1) / Math.max(1, n - 1)) * 100)}%</span>
         </div>
-        {ui && (
-          <div className="pointer-events-auto mt-1 flex items-center gap-2">
-            <Button variant="ghost" title="تصغير" aria-label="تصغير" className="reader-ui reader-tool" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}><ZoomOut className="size-4" /></Button>
-            <input type="range" min={1} max={n} value={page} onChange={(e) => go(+e.target.value)} className="w-full accent-accent" dir={rtl ? "rtl" : "ltr"} />
-            <Button variant="ghost" title="تكبير" aria-label="تكبير" className="reader-ui reader-tool" onClick={() => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))}><ZoomIn className="size-4" /></Button>
+        {ui && !draw && (
+          <div className="pdf-controls pointer-events-auto mt-1 flex flex-wrap items-center justify-center gap-1">
+            <Button variant="ghost" title="أول الصفحة" aria-label="أول الصفحة" className="reader-tool hidden sm:inline-flex" onClick={() => { navDir.current = 0; go(1, true); }}>«</Button>
+            <Button variant="ghost" title="السابق" aria-label="السابق" disabled={page === 1} onClick={() => turn(rtl ? 1 : -1)} className="reader-tool"><ChevronRight className="size-4" /></Button>
+            <span className="pdf-page-box flex items-center gap-1 text-xs">
+              <input type="number" min={1} max={n} value={pageInput} dir="ltr" aria-label="رقم الصفحة"
+                onChange={(e) => setPageInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                onBlur={commitPage} className="pdf-page-input" />
+              <span className="reader-mute">/ {n}</span>
+            </span>
+            <Button variant="ghost" title="التالي" aria-label="التالي" disabled={page === n} onClick={() => turn(rtl ? -1 : 1)} className="reader-tool"><ChevronLeft className="size-4" /></Button>
+            <Button variant="ghost" title="آخر الصفحة" aria-label="آخر الصفحة" className="reader-tool hidden sm:inline-flex" onClick={() => { navDir.current = 0; go(n, true); }}>»</Button>
+            <input type="range" min={1} max={n} value={page} onChange={(e) => { navDir.current = 0; go(+e.target.value); }} className="mx-1 min-w-24 flex-1 accent-accent" dir={rtl ? "rtl" : "ltr"} aria-label="التنقل بين الصفحات" />
+            <span className="pdf-divider" />
+            <Button variant="ghost" title="تصغير" aria-label="تصغير" className="reader-tool" onClick={() => zoomBy(-0.25)}><ZoomOut className="size-4" /></Button>
+            <Button variant="ghost" title="إعادة ملاءمة الصفحة" aria-label="نسبة العرض" className="pdf-zoom-value" onClick={() => setZoomAt(1)}>{Math.round(zoom * 100)}٪</Button>
+            <Button variant="ghost" title="تكبير" aria-label="تكبير" className="reader-tool" onClick={() => zoomBy(0.25)}><ZoomIn className="size-4" /></Button>
+            <Button variant="ghost" title="ملاءمة العرض" aria-label="ملاءمة العرض" aria-pressed={fitMode === "width" && zoom === 1} className={`reader-tool ${fitMode === "width" && zoom === 1 ? "border-accent" : ""}`} onClick={() => setFit("width")}><MoveHorizontal className="size-4" /></Button>
+            <Button variant="ghost" title="ملاءمة الصفحة" aria-label="ملاءمة الصفحة" aria-pressed={fitMode === "page" && zoom === 1} className={`reader-tool ${fitMode === "page" && zoom === 1 ? "border-accent" : ""}`} onClick={() => setFit("page")}><Square className="size-4" /></Button>
+            <span className="pdf-divider" />
+            {onModeChange && (
+              <Button variant="ghost" title={mode === "page" ? "تمرير مستمر" : "صفحة واحدة"} aria-label={mode === "page" ? "تمرير مستمر" : "صفحة واحدة"}
+                className="reader-tool" onClick={() => onModeChange(mode === "page" ? "scroll" : "page")}>
+                {mode === "page" ? <BookOpen className="size-4" /> : <Square className="size-4" />}
+              </Button>
+            )}
+            <Button variant="ghost" title={fs ? "الخروج من ملء الشاشة" : "قراءة بملء الشاشة"} aria-label="ملء الشاشة" className="reader-tool" onClick={toggleFs}>{fs ? <Minimize className="size-4" /> : <Maximize className="size-4" />}</Button>
           </div>
         )}
       </div>
-    </>
+    </MotionConfig>
   );
 }
 
@@ -204,7 +371,7 @@ function PdfPage({ pdf, n, width, height, root, eager, tool, drawing, note, onSa
         const p = await pdf.getPage(n);
         if (dead) return;
         const base = p.getViewport({ scale: 1 });
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const dpr = Math.min(window.devicePixelRatio || 1, 3);
         const vp = p.getViewport({ scale: (width * dpr) / base.width });
         const off = document.createElement("canvas");
         off.width = Math.floor(vp.width); off.height = Math.floor(vp.height);
@@ -219,6 +386,7 @@ function PdfPage({ pdf, n, width, height, root, eager, tool, drawing, note, onSa
       } catch { /* cancelled */ }
     }, eager ? 0 : 80);
     return () => { dead = true; clearTimeout(t); task?.cancel(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, pdf, n, width, eager]);
 
   // ink layer: redraw saved drawing whenever size or data changes
