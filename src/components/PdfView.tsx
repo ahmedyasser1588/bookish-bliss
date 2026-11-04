@@ -176,7 +176,8 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
     ptrs.current.set(e.pointerId, rel(e));
     try { box.setPointerCapture(e.pointerId); } catch { /* ignore */ }
     if (ptrs.current.size === 2) {
-      const [a, b] = [...ptrs.current.values()];
+      const pair = [...ptrs.current.values()];
+      const a = pair[0]!, b = pair[1]!;
       pinch.current = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: zoomRef.current, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
       pan.current = null;
       swiped.current = true;
@@ -188,7 +189,8 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
     if (draw || e.pointerType === "mouse" || !box || !ptrs.current.has(e.pointerId)) return;
     const p = rel(e); ptrs.current.set(e.pointerId, p);
     if (pinch.current && ptrs.current.size >= 2) {
-      const [a, b] = [...ptrs.current.values()];
+      const pair = [...ptrs.current.values()];
+      const a = pair[0]!, b = pair[1]!;
       const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
       const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
       const next = clampZ(pinch.current.z0 * (d / pinch.current.d0));
