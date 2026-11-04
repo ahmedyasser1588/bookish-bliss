@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight, Type, Highlighter, Timer, Volume2, VolumeX, ChevronLeft, ChevronRight,
   Copy, Download, Languages, BookA, X, Play, Pause, Trash2, CloudRain, FileImage, FileText,
-  Bookmark, BookmarkPlus, Pen,
+  Bookmark, BookmarkPlus, Pen, ArrowLeftRight,
 } from "lucide-react";
 import { getBook, updateBook, type Book, type Highlight } from "@/lib/db";
 import { addMinute, addWords } from "@/lib/stats";
@@ -246,6 +246,7 @@ function Reader() {
             {!pdfMode && <Button variant="ghost" className="reader-tool" title="تمرير تلقائي" aria-label="تمرير تلقائي" onClick={() => setAuto(!auto)}>{auto ? <Pause className="size-5" /> : <Play className="size-5" />}</Button>}
             <Button variant="ghost" className="reader-tool" title="العلامات المرجعية" aria-label="العلامات المرجعية" aria-pressed={panel === "bm"} onClick={() => setPanel(panel === "bm" ? null : "bm")}><Bookmark className="size-5" /></Button>
             {pdfMode && <Button variant="ghost" className="reader-tool" title="رسم وملاحظات" aria-label="رسم وملاحظات" aria-pressed={draw} onClick={() => { setDraw(!draw); setPanel(null); }}><Pen className="size-5" /></Button>}
+            {pdfMode && <Button variant="ghost" className="reader-tool" title="اتجاه القراءة" aria-label="اتجاه القراءة" onClick={() => { const d = rtl ? "ltr" : "rtl"; setBook({ ...book, dir: d }); updateBook(id, { dir: d }); }}><ArrowLeftRight className="size-5" /></Button>}
             <Button variant="ghost" className="reader-tool" title="مؤقت" aria-label="مؤقت" aria-pressed={panel === "timer"} onClick={() => setPanel(panel === "timer" ? null : "timer")}><Timer className="size-5" /></Button>
             {!pdfMode && <Button variant="ghost" className="reader-tool" title="التظليلات" aria-label="التظليلات" onClick={() => setPanel(panel === "hl" ? null : "hl")}><Highlighter className="size-5" /></Button>}
             <Button variant="ghost" className="reader-tool" title="الخط" aria-label="الخط" aria-pressed={panel === "type"} onClick={() => setPanel(panel === "type" ? null : "type")}><Type className="size-5" /></Button>
