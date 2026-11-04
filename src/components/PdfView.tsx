@@ -340,7 +340,7 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
                 {mode === "page" ? <BookOpen className="size-4" /> : <Square className="size-4" />}
               </Button>
             )}
-            <Button variant="ghost" title={fs ? "الخروج من ملء الشاشة" : "قراءة بملء الشاشة"} aria-label="ملء الشاشة" className="reader-tool" onClick={toggleFs}>{fs ? <Minimize className="size-4" /> : <Maximize className="size-4" />}</Button>
+            <Button variant="ghost" title={fs ? "الخروج من ملء الشاشة" : "قراءة بملء الشاشة"} aria-label={fs ? "الخروج من ملء الشاشة" : "ملء الشاشة"} className="reader-tool" onClick={toggleFs}>{fs ? <Minimize className="size-4" /> : <Maximize className="size-4" />}</Button>
           </div>
         )}
       </div>
