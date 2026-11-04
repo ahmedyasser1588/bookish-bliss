@@ -86,11 +86,10 @@ export async function importFile(file: File): Promise<Book> {
   else throw new Error("صيغة غير مدعومة");
   const isPdf = ext === "pdf";
   const plain = r.html.replace(/<[^>]+>/g, " ");
-  if (plain.trim().length < 20 && !isPdf)
-    throw new Error("مفيش نص في الملف ده (غالبًا ملف محمي أو فاضي)");
-
-  const ar = ((plain.slice(0, 5000) + r.title).match(/[\u0600-\u06FF]/g) || []).length;
-  const lat = (plain.slice(0, 5000).match(/[a-zA-Z]/g) || []).length;
+  // scanned PDFs have no text: fall back to the filename's language for direction
+  const dirSrc = plain.slice(0, 5000) || (isPdf && !r.html ? file.name : "");
+  const ar = ((dirSrc + r.title).match(/[\u0600-\u06FF]/g) || []).length;
+  const lat = (dirSrc.match(/[a-zA-Z]/g) || []).length;
   const words = plain.split(/\s+/).filter(Boolean).length;
   return {
     id: crypto.randomUUID(), title: r.title, author: r.author, cover: r.cover, html: r.html, format: ext.toUpperCase(), size: file.size,
