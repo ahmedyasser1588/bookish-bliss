@@ -284,7 +284,7 @@ export function PdfView({ file, initial, mode, rtl, ui, onProgress, onToggleUi, 
 
       {/* thin reading-progress line */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 h-[3px]">
-        <div className="h-full bg-accent/70 transition-[width] duration-300" style={{ width: `${(page / n) * 100}%` }} />
+        <div className="reader-progress h-full transition-[width] duration-300" style={{ width: `${(page / n) * 100}%` }} />
       </div>
 
       {draw && (
