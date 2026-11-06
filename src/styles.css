@@ -41,45 +41,69 @@
 
 :root {
   --radius: 0.5rem;
-  --background: oklch(0.985 0.008 95);
-  --foreground: oklch(0.22 0.028 265);
-  --card: oklch(0.998 0.004 95);
+  --background: #F1F8FC;
+  --foreground: #244C68;
+  --card: #D9EFFB;
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.53 0.2 262);
-  --primary-foreground: oklch(0.99 0.004 260);
-  --secondary: oklch(0.95 0.055 125);
-  --secondary-foreground: oklch(0.28 0.06 145);
-  --muted: oklch(0.945 0.012 255);
-  --muted-foreground: oklch(0.5 0.025 265);
-  --accent: oklch(0.82 0.18 125);
-  --accent-foreground: oklch(0.22 0.035 265);
+  --primary: #64B5E8;
+  --primary-foreground: #102A43;
+  --secondary: #D9EFFB;
+  --secondary-foreground: #244C68;
+  --muted: #D9EFFB;
+  --muted-foreground: #367FAE;
+  --accent: #8ACCF0;
+  --accent-foreground: #102A43;
   --destructive: oklch(0.59 0.2 28);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.89 0.02 260);
+  --border: #8ACCF0;
   --input: var(--border);
-  --ring: var(--accent);
-  --retreat-foreground: oklch(0.99 0.005 145);
-  --retreat-shade: oklch(0.19 0.03 265);
-  --cover-foreground: oklch(0.97 0.014 85);
-  --cover-sage: oklch(0.46 0.13 155);
-  --cover-clay: oklch(0.56 0.16 35);
-  --cover-lilac: oklch(0.5 0.15 310);
-  --cover-ocean: oklch(0.48 0.17 242);
-  --warm-surface: oklch(0.94 0.06 45);
-  --warm-ink: oklch(0.55 0.18 30);
-  --lilac-surface: oklch(0.94 0.04 255);
-  --lilac-ink: oklch(0.48 0.17 262);
-  --pop-coral: oklch(0.68 0.19 30);
-  --pop-lime: oklch(0.84 0.19 125);
-  --pop-blue: oklch(0.53 0.2 262);
-  --shadow-ui: 0 8px 28px -10px oklch(0.22 0.035 265 / 0.2);
+  --ring: #64B5E8;
+  --retreat-foreground: #F1F8FC;
+  --retreat-shade: #102A43;
+  --cover-foreground: #F1F8FC;
+  --cover-sage: #367FAE;
+  --cover-clay: #244C68;
+  --cover-lilac: #64B5E8;
+  --cover-ocean: #1D4260;
+  --warm-surface: #D9EFFB;
+  --warm-ink: #367FAE;
+  --lilac-surface: #D9EFFB;
+  --lilac-ink: #367FAE;
+  --pop-coral: #367FAE;
+  --pop-lime: #8ACCF0;
+  --pop-blue: #64B5E8;
+  --shadow-ui: 0 8px 28px -10px color-mix(in srgb, #102A43 20%, transparent);
   --hl-yellow: oklch(0.9 0.15 95 / 0.55);
   --hl-green: oklch(0.85 0.14 150 / 0.5);
   --hl-pink: oklch(0.8 0.13 350 / 0.5);
   --hl-blue: oklch(0.82 0.1 240 / 0.5);
-  --shadow-book: 0 14px 26px -10px oklch(0.22 0.035 265 / 0.28);
+  --shadow-book: 0 14px 26px -10px color-mix(in srgb, #102A43 28%, transparent);
+}
+
+.dark {
+  --background: #102A43;
+  --foreground: #F1F8FC;
+  --card: #1D4260;
+  --card-foreground: #F1F8FC;
+  --popover: #1D4260;
+  --popover-foreground: #F1F8FC;
+  --primary: #64B5E8;
+  --primary-foreground: #102A43;
+  --secondary: #244C68;
+  --secondary-foreground: #D9EFFB;
+  --muted: #1D4260;
+  --muted-foreground: #8ACCF0;
+  --accent: #8ACCF0;
+  --accent-foreground: #102A43;
+  --border: #367FAE;
+  --input: #367FAE;
+  --ring: #64B5E8;
+  --retreat-foreground: #F1F8FC;
+  --retreat-shade: #102A43;
+  --shadow-ui: 0 8px 28px -10px color-mix(in srgb, #102A43 48%, transparent);
+  --shadow-book: 0 14px 26px -10px color-mix(in srgb, #102A43 52%, transparent);
 }
 
 @layer base {
@@ -95,9 +119,9 @@
 
 /* Reader themes */
 .reader { background: var(--r-bg); color: var(--r-fg); transition: background .4s, color .4s; }
-.reader[data-theme="light"] { --r-bg: oklch(0.99 0 0); --r-fg: oklch(0.2 0 0); --r-ui: oklch(0.96 0 0); --r-mute: oklch(0.55 0 0); }
+.reader[data-theme="light"] { --r-bg: #F1F8FC; --r-fg: #102A43; --r-ui: #D9EFFB; --r-mute: #367FAE; }
 .reader[data-theme="sepia"] { --r-bg: oklch(0.965 0.023 85); --r-fg: oklch(0.29 0.023 65); --r-ui: oklch(0.98 0.016 85); --r-mute: oklch(0.5 0.025 70); }
-.reader[data-theme="dark"] { --r-bg: oklch(0.22 0.014 160); --r-fg: oklch(0.87 0.009 100); --r-ui: oklch(0.26 0.013 160); --r-mute: oklch(0.65 0.012 150); }
+.reader[data-theme="dark"] { --r-bg: #102A43; --r-fg: #F1F8FC; --r-ui: #1D4260; --r-mute: #8ACCF0; }
 .reader[data-theme="oled"] { --r-bg: oklch(0 0 0); --r-fg: oklch(0.8 0.01 80); --r-ui: oklch(0.16 0 0); --r-mute: oklch(0.55 0 0); }
 .reader-ui { background: var(--r-ui); color: var(--r-fg); }
 .reader-mute { color: var(--r-mute); }
