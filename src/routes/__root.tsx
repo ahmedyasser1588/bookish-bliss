@@ -79,7 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#f3ebdd" },
+      { name: "theme-color", content: "#F1F8FC" },
       { title: "مكتبتي — قارئ الكتب" },
       { name: "description", content: "قارئ كتب أنيق لملفات PDF وEPUB وTXT يعمل بدون إنترنت." },
       { property: "og:type", content: "website" },
