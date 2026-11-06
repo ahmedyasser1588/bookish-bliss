@@ -228,7 +228,7 @@
 .stats-page .rounded-xl { border-radius: 8px; border-color: color-mix(in oklch, var(--primary) 18%, var(--border)); box-shadow: var(--shadow-ui); }
 .stats-page section { background-color: color-mix(in oklch, var(--card) 90%, var(--lilac-surface)); }
 .stats-page section:first-of-type > div:nth-child(2n) { background-color: color-mix(in oklch, var(--card) 70%, var(--secondary)); }
-.auth-page { background: radial-gradient(ellipse at 50% 0%, color-mix(in oklch, var(--secondary) 85%, transparent), transparent 48%), var(--background); }
+.auth-page { border-top: 4px solid var(--primary); background: var(--background); }
 .auth-page > h1 { color: var(--primary); }
 .auth-page > svg { padding: 10px; box-sizing: content-box; color: var(--primary); background: var(--secondary); border-radius: 16px; }
 .auth-page input { border-radius: 8px; }
