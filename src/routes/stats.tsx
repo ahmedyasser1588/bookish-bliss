@@ -39,7 +39,7 @@ function StatsPage() {
   ];
 
   return (
-    <main className="mx-auto min-h-screen max-w-4xl px-5 py-6 sm:px-8">
+    <main className="stats-page mx-auto min-h-screen max-w-4xl px-5 py-6 sm:px-8">
       <div className="mb-6 flex items-center gap-3">
         <Button asChild variant="ghost"><Link to="/" aria-label="رجوع"><ArrowRight className="size-5" /></Link></Button>
         <h1 className="font-display text-3xl font-bold">إحصائياتي</h1>
