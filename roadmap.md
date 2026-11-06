@@ -4,3 +4,4 @@
 - [x] Improve easy, smooth reader navigation without changing original PDF rendering.
 - [x] Test confirmed-account sign-in, account isolation, cloud PDF restoration, and saved reading page.
 - [x] Username-only self-registration: email confirmation turned off in auth settings (2026-11-04).
+- [ ] Refresh the library, reader, statistics, and sign-in visual identity without changing books or reading behavior.

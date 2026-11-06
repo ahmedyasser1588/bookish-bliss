@@ -28,7 +28,7 @@ function Auth() {
     } catch (e) { setError(e instanceof Error && e.message.includes("اسم المستخدم") ? e.message : signup ? "تعذر إنشاء الحساب. الاسم قد يكون مستخدمًا، أو كلمة المرور غير مناسبة؛ جرّب اسمًا آخر وكلمة مرور أقوى." : "تعذر الدخول؛ راجع اسم المستخدم وكلمة المرور واتصال الإنترنت."); }
     finally { setBusy(false); }
   }
-  return <main className="mx-auto min-h-screen max-w-md px-6 py-12">
+  return <main className="auth-page mx-auto min-h-screen max-w-md px-6 py-12">
     <Button asChild variant="ghost"><Link to="/"><ArrowRight /> المكتبة</Link></Button>
     <BookOpen className="mx-auto mt-12 size-12 text-primary" /><h1 className="mt-5 text-center font-display text-3xl font-bold">{signup ? "حساب جديد" : "أهلًا بعودتك"}</h1>
     {user ? <Button asChild className="mt-8 w-full"><Link to="/">افتح مكتبتك</Link></Button> : <form onSubmit={submit} className="mt-8 space-y-5">
